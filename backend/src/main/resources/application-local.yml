@@ -1,0 +1,13 @@
+spring:
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: jking-ai-labs
+          location: us-central1
+          credentials-uri: classpath:gcp-credentials.json
+
+logging:
+  level:
+    com.jkingai.diagramarchitect: DEBUG
+    org.springframework.ai: DEBUG

@@ -1,0 +1,11 @@
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5000
+      - https://diagram-architect.web.app
+      - https://diagram-architect.firebaseapp.com
+
+logging:
+  level:
+    com.jkingai.diagramarchitect: INFO
+    org.springframework.ai: WARN

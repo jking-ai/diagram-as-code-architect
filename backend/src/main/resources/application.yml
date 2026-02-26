@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: diagram-architect
+  ai:
+    model:
+      chat: vertexai
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GOOGLE_CLOUD_PROJECT:}
+          location: ${VERTEX_AI_LOCATION:us-central1}
+          chat:
+            options:
+              model: gemini-2.0-flash
+              temperature: 0.2
+
+app:
+  cors:
+    allowed-origins:
+      - http://localhost:5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
