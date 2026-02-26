@@ -14,3 +14,4 @@ gcp-credentials.json
 
 # OS
 .DS_Store
+node_modules/
