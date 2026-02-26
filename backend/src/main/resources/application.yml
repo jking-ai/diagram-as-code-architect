@@ -10,7 +10,7 @@ spring:
     vertex:
       ai:
         gemini:
-          project-id: ${GOOGLE_CLOUD_PROJECT:}
+          project-id: ${GOOGLE_CLOUD_PROJECT:jking-ai-labs}
           location: ${VERTEX_AI_LOCATION:us-central1}
           chat:
             options:
