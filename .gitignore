@@ -12,6 +12,9 @@ gcp-credentials.json
 *.iml
 .vscode/
 
+# Firebase
+.firebase/
+
 # OS
 .DS_Store
 node_modules/
