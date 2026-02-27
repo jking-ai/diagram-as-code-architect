@@ -1,0 +1,20 @@
+app:
+  security:
+    api-key: dev-local-key-changeme
+    allowed-origins:
+      - http://localhost:5000
+      - http://localhost:4321
+
+spring:
+  ai:
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
+          location: us-central1
+          credentials-uri: classpath:gcp-credentials.json
+
+logging:
+  level:
+    com.jkingai.diagramarchitect: DEBUG
+    org.springframework.ai: DEBUG

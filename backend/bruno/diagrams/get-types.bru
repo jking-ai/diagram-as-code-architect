@@ -1,0 +1,16 @@
+meta {
+  name: Get Types
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{host}}/api/v1/diagrams/types
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.diagramTypes.length: eq 5
+}

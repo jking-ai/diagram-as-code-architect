@@ -1,0 +1,4 @@
+vars {
+  host: https://YOUR_CLOUD_RUN_URL
+  apiKey: <your-production-api-key>
+}

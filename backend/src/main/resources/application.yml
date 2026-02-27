@@ -1,0 +1,51 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: diagram-architect
+  ai:
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 2000
+        multiplier: 3
+        max-interval: 15000
+    model:
+      chat: vertexai
+    vertex:
+      ai:
+        gemini:
+          project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
+          location: ${VERTEX_AI_LOCATION:us-central1}
+          chat:
+            options:
+              model: gemini-2.0-flash
+              temperature: 0.2
+
+app:
+  security:
+    api-key: ${API_KEY:dev-local-key-changeme}
+    allowed-origins:
+      - ${ALLOWED_ORIGIN:http://localhost:5000}
+      - http://localhost:4321
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gemini:
+        sliding-window-size: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - com.google.api.gax.rpc.ResourceExhaustedException
+          - io.grpc.StatusRuntimeException
+        ignore-exceptions:
+          - com.jkingai.diagramarchitect.exception.DiagramGenerationException
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

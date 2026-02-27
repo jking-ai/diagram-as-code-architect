@@ -1,0 +1,421 @@
+---
+// Diagram-as-Code Architect - Frontend
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Diagram-as-Code Architect</title>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+    <style>
+      :root {
+        --bg-primary: #0f1117;
+        --bg-secondary: #1a1b26;
+        --bg-tertiary: #24283b;
+        --text-primary: #c0caf5;
+        --text-secondary: #a9b1d6;
+        --text-muted: #565f89;
+        --accent: #7aa2f7;
+        --accent-hover: #89b4fa;
+        --border: #3b4261;
+        --success: #9ece6a;
+        --error: #f7768e;
+      }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+      }
+
+      header {
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border);
+        padding: 1rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      header h1 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--accent);
+      }
+
+      header span {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        background: var(--bg-tertiary);
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+      }
+
+      .container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        padding: 1rem 2rem;
+        height: calc(100vh - 60px);
+      }
+
+      .panel {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-shrink: 0;
+      }
+
+      .panel-header h2 {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+      }
+
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+
+      select, button {
+        font-family: inherit;
+        font-size: 0.8rem;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+        padding: 0.4rem 0.6rem;
+        cursor: pointer;
+      }
+
+      select:hover, button:hover {
+        border-color: var(--accent);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg-primary);
+        font-weight: 600;
+        border: none;
+        padding: 0.4rem 1rem;
+      }
+
+      .btn-primary:hover { background: var(--accent-hover); }
+      .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      textarea {
+        flex: 1;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border: none;
+        padding: 1rem;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+      }
+
+      textarea::placeholder { color: var(--text-muted); }
+
+      .output-area {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        overflow: auto;
+        background: var(--bg-primary);
+      }
+
+      .output-area .placeholder {
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        text-align: center;
+      }
+
+      .output-area .placeholder .icon {
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+
+      .output-area svg { max-width: 100%; height: auto; }
+
+      .error-banner {
+        background: rgba(247, 118, 142, 0.1);
+        border: 1px solid var(--error);
+        color: var(--error);
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+        display: none;
+      }
+
+      .export-buttons {
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      #loading {
+        display: none;
+        color: var(--accent);
+        font-size: 0.9rem;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 0.5rem;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>⬡ Diagram-as-Code Architect</h1>
+      <span>Powered by Gemini + Spring AI</span>
+    </header>
+
+    <div class="container">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Code Input</h2>
+          <div class="controls">
+            <select id="codeLanguage">
+              <option value="JAVA">Java</option>
+              <option value="HCL">Terraform (HCL)</option>
+            </select>
+            <select id="diagramType">
+              <option value="FLOWCHART">Flowchart</option>
+              <option value="SEQUENCE">Sequence</option>
+              <option value="CLASS">Class Diagram</option>
+              <option value="ENTITY_RELATIONSHIP">ER Diagram</option>
+              <option value="INFRASTRUCTURE">Infrastructure</option>
+            </select>
+            <button class="btn-primary" id="generateBtn">Generate</button>
+          </div>
+        </div>
+        <textarea id="codeInput" placeholder="Paste your Java or Terraform code here..."></textarea>
+        <div>
+          <input type="text" id="contextInput" placeholder="Optional: describe what to focus on..."
+            style="width:100%; padding:0.5rem 1rem; background:var(--bg-tertiary); border:none; border-top:1px solid var(--border); color:var(--text-primary); font-size:0.8rem; outline:none;" />
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Diagram Output</h2>
+          <div class="controls">
+            <span id="loading"><span class="spinner"></span>Generating...</span>
+            <div class="export-buttons">
+              <button id="copyBtn" title="Copy Mermaid syntax">📋 Copy</button>
+              <button id="exportPng" title="Export as PNG">🖼️ PNG</button>
+              <button id="exportSvg" title="Export as SVG">📄 SVG</button>
+            </div>
+          </div>
+        </div>
+        <div class="error-banner" id="errorBanner"></div>
+        <div class="output-area" id="outputArea">
+          <div class="placeholder">
+            <span class="icon">⬡</span>
+            Paste code on the left and click Generate<br/>
+            to create a Mermaid.js diagram
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script is:inline>
+      // Initialize Mermaid
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: 'dark',
+        themeVariables: {
+          darkMode: true,
+          background: '#0f1117',
+          primaryColor: '#7aa2f7',
+          primaryTextColor: '#c0caf5',
+          lineColor: '#3b4261',
+        }
+      });
+
+      // In production, calls go through Firebase Function proxy (same origin)
+      // In local dev, calls go directly to the backend with the dev API key
+      const IS_LOCAL = window.location.hostname === 'localhost';
+      const API_BASE = IS_LOCAL ? 'http://localhost:8080' : '';
+
+      // DOM elements
+      const codeInput = document.getElementById('codeInput');
+      const codeLanguage = document.getElementById('codeLanguage');
+      const diagramType = document.getElementById('diagramType');
+      const contextInput = document.getElementById('contextInput');
+      const generateBtn = document.getElementById('generateBtn');
+      const outputArea = document.getElementById('outputArea');
+      const errorBanner = document.getElementById('errorBanner');
+      const loading = document.getElementById('loading');
+      const copyBtn = document.getElementById('copyBtn');
+      const exportPng = document.getElementById('exportPng');
+      const exportSvg = document.getElementById('exportSvg');
+
+      let currentMermaidSyntax = '';
+
+      // Filter diagram types based on language
+      const diagramCompatibility = {
+        JAVA: ['FLOWCHART', 'SEQUENCE', 'CLASS', 'ENTITY_RELATIONSHIP'],
+        HCL: ['FLOWCHART', 'INFRASTRUCTURE']
+      };
+
+      codeLanguage.addEventListener('change', () => {
+        const lang = codeLanguage.value;
+        const allowed = diagramCompatibility[lang];
+        Array.from(diagramType.options).forEach(opt => {
+          opt.disabled = !allowed.includes(opt.value);
+        });
+        if (!allowed.includes(diagramType.value)) {
+          diagramType.value = allowed[0];
+        }
+      });
+
+      // Generate diagram
+      generateBtn.addEventListener('click', async () => {
+        const code = codeInput.value.trim();
+        if (!code) {
+          showError('Please paste some code first.');
+          return;
+        }
+
+        hideError();
+        loading.style.display = 'inline';
+        generateBtn.disabled = true;
+
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (IS_LOCAL) {
+            headers['X-API-Key'] = 'dev-local-key-changeme';
+          }
+
+          const response = await fetch(`${API_BASE}/api/v1/diagrams/generate`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              code: code,
+              diagramType: diagramType.value,
+              codeLanguage: codeLanguage.value,
+              context: contextInput.value.trim() || null
+            })
+          });
+
+          if (!response.ok) {
+            if (response.status === 429) {
+              const retryAfter = response.headers.get('Retry-After') || '30';
+              throw new Error(`The AI service is experiencing high demand. Please wait ${retryAfter} seconds and try again.`);
+            }
+            if (response.status === 503) {
+              const retryAfter = response.headers.get('Retry-After') || '30';
+              throw new Error(`The AI service is temporarily unavailable. Please try again in ${retryAfter} seconds.`);
+            }
+            const err = await response.json();
+            throw new Error(err.message || `API error: ${response.status}`);
+          }
+
+          const data = await response.json();
+          currentMermaidSyntax = data.mermaidSyntax;
+          await renderMermaid(currentMermaidSyntax);
+        } catch (err) {
+          showError(err.message);
+        } finally {
+          loading.style.display = 'none';
+          generateBtn.disabled = false;
+        }
+      });
+
+      async function renderMermaid(syntax) {
+        try {
+          const { svg } = await mermaid.render('mermaid-output', syntax);
+          outputArea.innerHTML = svg;
+        } catch (err) {
+          outputArea.innerHTML = `<pre style="color:var(--error);font-size:0.8rem;white-space:pre-wrap;">Mermaid render error:\n${err.message}\n\nRaw syntax:\n${syntax}</pre>`;
+        }
+      }
+
+      // Copy Mermaid syntax
+      copyBtn.addEventListener('click', () => {
+        if (!currentMermaidSyntax) return;
+        navigator.clipboard.writeText(currentMermaidSyntax);
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => copyBtn.textContent = '📋 Copy', 2000);
+      });
+
+      // Export as SVG
+      exportSvg.addEventListener('click', () => {
+        const svg = outputArea.querySelector('svg');
+        if (!svg) return;
+        const blob = new Blob([svg.outerHTML], { type: 'image/svg+xml' });
+        downloadBlob(blob, 'diagram.svg');
+      });
+
+      // Export as PNG
+      exportPng.addEventListener('click', () => {
+        const svg = outputArea.querySelector('svg');
+        if (!svg) return;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const data = new XMLSerializer().serializeToString(svg);
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width * 2;
+          canvas.height = img.height * 2;
+          ctx.scale(2, 2);
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob(blob => downloadBlob(blob, 'diagram.png'), 'image/png');
+        };
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(data)));
+      });
+
+      function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function showError(msg) {
+        errorBanner.textContent = msg;
+        errorBanner.style.display = 'block';
+      }
+
+      function hideError() {
+        errorBanner.style.display = 'none';
+      }
+    </script>
+  </body>
+</html>

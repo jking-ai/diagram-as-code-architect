@@ -1,0 +1,27 @@
+meta {
+  name: Generate Missing Code (400)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{host}}/api/v1/diagrams/generate
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "diagramType": "FLOWCHART",
+    "codeLanguage": "JAVA"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.error: eq VALIDATION_ERROR
+}

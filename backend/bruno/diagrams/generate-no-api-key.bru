@@ -1,0 +1,29 @@
+meta {
+  name: Generate No API Key (401)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{host}}/api/v1/diagrams/generate
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  ~X-API-Key:
+}
+
+body:json {
+  {
+    "code": "public class Hello {}",
+    "diagramType": "FLOWCHART",
+    "codeLanguage": "JAVA"
+  }
+}
+
+assert {
+  res.status: eq 401
+  res.body.error: eq UNAUTHORIZED
+}
