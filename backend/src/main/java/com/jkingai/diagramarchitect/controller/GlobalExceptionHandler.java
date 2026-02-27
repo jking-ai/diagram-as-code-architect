@@ -2,6 +2,8 @@ package com.jkingai.diagramarchitect.controller;
 
 import com.jkingai.diagramarchitect.dto.ErrorResponse;
 import com.jkingai.diagramarchitect.exception.DiagramGenerationException;
+import com.jkingai.diagramarchitect.exception.LlmRateLimitException;
+import com.jkingai.diagramarchitect.exception.LlmServiceUnavailableException;
 import com.jkingai.diagramarchitect.exception.UnsupportedDiagramTypeException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -55,6 +57,22 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnsupportedType(UnsupportedDiagramTypeException ex, HttpServletRequest request) {
         return ResponseEntity.badRequest().body(
                 new ErrorResponse("UNSUPPORTED_DIAGRAM_TYPE", ex.getMessage(), Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(LlmRateLimitException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimit(LlmRateLimitException ex, HttpServletRequest request) {
+        log.warn("LLM rate limited: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(new ErrorResponse("RATE_LIMITED", ex.getMessage(), Instant.now(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(LlmServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleServiceUnavailable(LlmServiceUnavailableException ex, HttpServletRequest request) {
+        log.error("LLM service unavailable (circuit breaker open): {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+                .body(new ErrorResponse("SERVICE_UNAVAILABLE", ex.getMessage(), Instant.now(), request.getRequestURI()));
     }
 
     @ExceptionHandler(DiagramGenerationException.class)
