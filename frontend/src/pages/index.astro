@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>Diagram-as-Code Architect</title>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
+    <script is:inline src="https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js"></script>
     <style>
       :root {
         --bg-primary: #0f1117;
@@ -252,7 +252,7 @@
       </div>
     </div>
 
-    <script>
+    <script is:inline>
       // Initialize Mermaid
       mermaid.initialize({
         startOnLoad: false,
