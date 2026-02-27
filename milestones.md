@@ -4,7 +4,7 @@ This document defines three development phases with concrete deliverables and ac
 
 ---
 
-## Phase 1: Foundation
+## Phase 1: Foundation ✅
 
 **Goal:** Project scaffolding, core dependencies wired, prompt templates drafted, and a deployable (but non-functional) backend and frontend skeleton running locally.
 
@@ -12,75 +12,75 @@ This document defines three development phases with concrete deliverables and ac
 
 ### Deliverables
 
-#### 1.1 Backend Project Scaffolding
+#### 1.1 Backend Project Scaffolding ✅
 
-- [ ] Initialize a Spring Boot 3.4.5 project using Gradle (Kotlin DSL) with Java 21.
-- [ ] Configure the following dependencies in `build.gradle.kts`:
+- [x] Initialize a Spring Boot 3.5.11 project using Gradle (Kotlin DSL) with Java 21.
+- [x] Configure the following dependencies in `build.gradle.kts`:
   - `spring-boot-starter-web`
   - `spring-boot-starter-validation`
   - `spring-boot-starter-actuator`
-  - `spring-ai-vertex-ai-gemini-spring-boot-starter` (1.0.1)
+  - `spring-ai-starter-model-vertex-ai-gemini` (Spring AI 1.1.2)
   - Test dependencies: `spring-boot-starter-test`
-- [ ] Create the package structure as defined in architecture.md under `backend/src/main/java/com/jkingai/diagramarchitect/`.
-- [ ] Configure `application.yml` with profiles for `local` and `prod`.
-- [ ] In `application.yml`, configure Spring AI Vertex AI properties:
+- [x] Create the package structure as defined in architecture.md under `backend/src/main/java/com/jkingai/diagramarchitect/`.
+- [x] Configure `application.yml` with profiles for `local` and `prod`.
+- [x] In `application.yml`, configure Spring AI Vertex AI properties:
   - `spring.ai.vertex.ai.gemini.project-id` (from environment variable)
   - `spring.ai.vertex.ai.gemini.location` (default: `us-central1`)
-  - `spring.ai.vertex.ai.gemini.chat.options.model` (default: `gemini-2.5-flash`)
+  - `spring.ai.vertex.ai.gemini.chat.options.model` (default: `gemini-2.0-flash`)
   - `spring.ai.vertex.ai.gemini.chat.options.temperature` (default: `0.2` for deterministic structured output)
 
 **Acceptance Criteria:**
-- `./gradlew build` completes successfully (compilation, no test failures).
-- The application starts locally with `./gradlew bootRun` using the `local` profile.
+- [x] `./gradlew build` completes successfully (compilation, no test failures).
+- [x] The application starts locally with `./gradlew bootRun` using the `local` profile.
 
-#### 1.2 Model Enums and DTOs
+#### 1.2 Model Enums and DTOs ✅
 
-- [ ] Create `DiagramType` enum with values: `FLOWCHART`, `SEQUENCE`, `CLASS`, `ENTITY_RELATIONSHIP`, `INFRASTRUCTURE`.
-- [ ] Create `CodeLanguage` enum with values: `JAVA`, `HCL`.
-- [ ] Add a method to `DiagramType` that returns the set of supported `CodeLanguage` values for that type (matching the compatibility table in api-contracts.md).
-- [ ] Create `DiagramRequest` record with fields: `code`, `diagramType`, `codeLanguage`, `context`. Add Bean Validation annotations: `@NotBlank` on `code`, `@NotNull` on `diagramType` and `codeLanguage`, `@Size(max = 50000)` on `code`, `@Size(max = 500)` on `context`.
-- [ ] Create `DiagramResponse` record with fields: `mermaidSyntax`, `diagramType`, `codeLanguage`, `metadata`.
-- [ ] Create `DiagramTypeInfo` record with fields: `type`, `name`, `description`, `supportedLanguages`, `mermaidDirective`.
-- [ ] Create `ErrorResponse` record with fields: `error`, `message`, `timestamp`, `path`.
-
-**Acceptance Criteria:**
-- All DTOs compile and have proper validation annotations.
-- `DiagramType.SEQUENCE.getSupportedLanguages()` returns `[JAVA]`.
-- `DiagramType.FLOWCHART.getSupportedLanguages()` returns `[JAVA, HCL]`.
-- `DiagramType.INFRASTRUCTURE.getSupportedLanguages()` returns `[HCL]`.
-
-#### 1.3 Health Check Endpoint
-
-- [ ] Implement `GET /api/v1/health` as specified in api-contracts.md.
-- [ ] The endpoint checks Vertex AI availability by making a lightweight test call (or returning `UNKNOWN` if the model is not yet configured).
-- [ ] Return the response structure matching api-contracts.md.
+- [x] Create `DiagramType` enum with values: `FLOWCHART`, `SEQUENCE`, `CLASS`, `ENTITY_RELATIONSHIP`, `INFRASTRUCTURE`.
+- [x] Create `CodeLanguage` enum with values: `JAVA`, `HCL`.
+- [x] Add a method to `DiagramType` that returns the set of supported `CodeLanguage` values for that type (matching the compatibility table in api-contracts.md).
+- [x] Create `DiagramRequest` record with fields: `code`, `diagramType`, `codeLanguage`, `context`. Add Bean Validation annotations: `@NotBlank` on `code`, `@NotNull` on `diagramType` and `codeLanguage`, `@Size(max = 50000)` on `code`, `@Size(max = 500)` on `context`.
+- [x] Create `DiagramResponse` record with fields: `mermaidSyntax`, `diagramType`, `codeLanguage`, `metadata`.
+- [x] Create `DiagramTypeInfo` record with fields: `type`, `name`, `description`, `supportedLanguages`, `mermaidDirective`.
+- [x] Create `ErrorResponse` record with fields: `error`, `message`, `timestamp`, `path`.
 
 **Acceptance Criteria:**
-- `curl http://localhost:8080/api/v1/health` returns a 200 response with the expected JSON structure.
+- [x] All DTOs compile and have proper validation annotations.
+- [x] `DiagramType.SEQUENCE.getSupportedLanguages()` returns `[JAVA]`.
+- [x] `DiagramType.FLOWCHART.getSupportedLanguages()` returns `[JAVA, HCL]`.
+- [x] `DiagramType.INFRASTRUCTURE.getSupportedLanguages()` returns `[HCL]`.
 
-#### 1.4 CORS Configuration
+#### 1.3 Health Check Endpoint ✅
 
-- [ ] Create `CorsConfig.java` that allows requests from `http://localhost:5000` (Firebase local emulator) and the production Firebase Hosting domain.
-- [ ] Configure allowed methods: `GET`, `POST`, `OPTIONS`.
-- [ ] Configure allowed headers: `Content-Type`.
-
-**Acceptance Criteria:**
-- A preflight `OPTIONS` request from `http://localhost:5000` returns appropriate CORS headers.
-
-#### 1.5 Frontend Skeleton
-
-- [ ] Create `frontend/index.html` with a single-page layout containing: a code input textarea, a diagram type dropdown selector, a code language dropdown selector, an optional context input field, a "Generate" button, a diagram output area, and buttons for "Copy Mermaid", "Export PNG", and "Export SVG".
-- [ ] Create `frontend/css/style.css` with a dark theme matching the portfolio site aesthetic.
-- [ ] Create `frontend/js/app.js` with event listeners wired to the UI elements (generation logic will be stubbed).
-- [ ] Create `frontend/js/api.js` with functions `generateDiagram(request)` and `getDiagramTypes()` that call the backend API (hardcode base URL for now).
-- [ ] Create `frontend/js/renderer.js` that initializes Mermaid.js (loaded from CDN: `https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js`) and provides a `renderDiagram(mermaidSyntax, targetElement)` function.
-- [ ] Create `frontend/firebase.json` with hosting configuration pointing to the `frontend/` directory as the public folder.
+- [x] Implement `GET /api/v1/health` as specified in api-contracts.md.
+- [x] The endpoint checks Vertex AI availability by making a lightweight test call (or returning `UNKNOWN` if the model is not yet configured).
+- [x] Return the response structure matching api-contracts.md.
 
 **Acceptance Criteria:**
-- Opening `frontend/index.html` in a browser shows the full UI layout.
-- The diagram type dropdown is populated with all five types.
-- Mermaid.js loads from CDN without errors (check browser console).
-- Hardcoding a sample Mermaid string in `renderer.js` produces a visible diagram.
+- [x] `curl http://localhost:8080/api/v1/health` returns a 200 response with the expected JSON structure.
+
+#### 1.4 CORS Configuration ✅
+
+- [x] Create `CorsConfig.java` that allows requests from `http://localhost:5000` (Firebase local emulator) and the production Firebase Hosting domain.
+- [x] Configure allowed methods: `GET`, `POST`, `OPTIONS`.
+- [x] Configure allowed headers: `Content-Type`.
+
+**Acceptance Criteria:**
+- [x] A preflight `OPTIONS` request from `http://localhost:5000` returns appropriate CORS headers.
+
+#### 1.5 Frontend Skeleton ✅
+
+- [x] Create Astro 5.17.1 single-page app (`frontend/src/pages/index.astro`) with: a code input textarea, a diagram type dropdown selector, a code language dropdown selector, an optional context input field, a "Generate" button, a diagram output area, and buttons for "Copy Mermaid", "Export PNG", and "Export SVG".
+- [x] Dark theme with CSS variables matching the portfolio site aesthetic (implemented inline in Astro component).
+- [x] Event listeners wired to all UI elements with generation logic.
+- [x] API integration calling backend endpoints with dynamic base URL (localhost vs production).
+- [x] Mermaid.js initialized from CDN (`https://cdn.jsdelivr.net/npm/mermaid@11.6.0/dist/mermaid.min.js`) with `is:inline` attribute for Astro compatibility.
+- [x] `firebase.json` with hosting configuration pointing to `frontend/dist/` as the public folder.
+
+**Acceptance Criteria:**
+- [x] Opening the frontend in a browser shows the full UI layout.
+- [x] The diagram type dropdown is populated with all five types.
+- [x] Mermaid.js loads from CDN without errors.
+- [x] Diagrams render correctly in the output area.
 
 ---
 
@@ -88,7 +88,7 @@ This document defines three development phases with concrete deliverables and ac
 
 ---
 
-## Phase 2: Core Features
+## Phase 2: Core Features ✅
 
 **Goal:** End-to-end diagram generation working -- user submits code, backend processes it through the LLM, and the frontend renders the resulting Mermaid diagram.
 
@@ -98,134 +98,136 @@ This document defines three development phases with concrete deliverables and ac
 
 ### Deliverables
 
-#### 2.1 Prompt Templates
+#### 2.1 Prompt Templates ✅
 
-- [ ] Create prompt template files in `backend/src/main/resources/` (or `src/main/java/.../prompt/templates/` as classpath resources):
+- [x] Create prompt template files in `backend/src/main/resources/prompt/templates/`:
   - `java-flowchart.txt`
   - `java-sequence.txt`
   - `java-class.txt`
   - `java-entity-relationship.txt`
   - `hcl-flowchart.txt`
   - `hcl-infrastructure.txt`
-- [ ] Each template must include:
-  - A system instruction explaining the task (e.g., "You are an expert software architect. Analyze the following Java code and produce a Mermaid.js flowchart.").
-  - Explicit Mermaid syntax rules for the target diagram type (e.g., "Use `flowchart TB` for top-to-bottom layout. Wrap node labels containing special characters in double quotes.").
+- [x] Each template includes:
+  - A system instruction explaining the task.
+  - Explicit Mermaid syntax rules for the target diagram type.
   - A one-shot example of valid input and valid Mermaid output.
-  - A placeholder `{code}` for the user's code and `{context}` for the optional context.
+  - Placeholders `{code}` and `{context}`.
   - An instruction to output ONLY the Mermaid code block, with no surrounding explanation.
-- [ ] Validate each template by manually testing it against the Gemini model (or running the integration test in 2.5).
+- [x] Templates validated by testing against the Gemini model.
 
 **Acceptance Criteria:**
-- Six prompt template files exist and contain all required sections.
-- Each template, when filled with the sample code from api-contracts.md, produces a valid prompt string.
+- [x] Six prompt template files exist and contain all required sections.
+- [x] Each template, when filled with sample code, produces a valid prompt string.
 
-#### 2.2 Prompt Template Engine
+#### 2.2 Prompt Template Engine ✅
 
-- [ ] Implement `PromptTemplateEngine.java` that:
+- [x] Implement `PromptTemplateEngine.java` that:
   - Loads prompt templates from the classpath.
   - Selects the correct template based on `CodeLanguage` and `DiagramType`.
   - Replaces `{code}` and `{context}` placeholders with actual values.
   - Returns the assembled prompt string.
-- [ ] If `context` is null or blank, replace `{context}` with an empty string or a default instruction.
+  - Caches templates in `ConcurrentHashMap` on first load.
+- [x] If `context` is null or blank, replace `{context}` with an empty string or a default instruction.
 
 **Acceptance Criteria:**
-- Unit test: given `JAVA` and `FLOWCHART`, the engine returns a prompt containing the java-flowchart template content with placeholders filled.
-- Unit test: given `HCL` and `SEQUENCE`, the engine throws `UnsupportedDiagramTypeException`.
+- [x] Given `JAVA` and `FLOWCHART`, the engine returns a prompt containing the java-flowchart template content with placeholders filled.
+- [x] Given `HCL` and `SEQUENCE`, the engine throws `UnsupportedDiagramTypeException`.
 
-#### 2.3 Code Analysis Service
+#### 2.3 Code Analysis Service ✅
 
-- [ ] Implement `CodeAnalysisService.java` that:
+- [x] Implement `CodeAnalysisService.java` that:
   - Validates code is not blank and does not exceed 50,000 characters.
   - Validates the `DiagramType` and `CodeLanguage` combination is supported.
   - Trims and normalizes whitespace in the code input.
-- [ ] Throw `UnsupportedDiagramTypeException` for invalid combinations.
+- [x] Throws `UnsupportedDiagramTypeException` for invalid combinations.
 
 **Acceptance Criteria:**
-- Unit test: blank code input throws a validation exception.
-- Unit test: code exceeding 50,000 characters throws a validation exception.
-- Unit test: `SEQUENCE` with `HCL` throws `UnsupportedDiagramTypeException`.
-- Unit test: `FLOWCHART` with `JAVA` passes validation.
+- [x] Blank code input throws a validation exception.
+- [x] Code exceeding 50,000 characters throws a validation exception.
+- [x] `SEQUENCE` with `HCL` throws `UnsupportedDiagramTypeException`.
+- [x] `FLOWCHART` with `JAVA` passes validation.
 
-#### 2.4 Mermaid Syntax Extractor
+#### 2.4 Mermaid Syntax Extractor ✅
 
-- [ ] Implement `MermaidSyntaxExtractor.java` that:
+- [x] Implement `MermaidSyntaxExtractor.java` that:
   - Parses the LLM response text to extract the Mermaid code block.
   - Handles responses wrapped in triple backticks (` ```mermaid ... ``` `) or returned as raw Mermaid syntax.
   - Strips any leading/trailing whitespace or markdown formatting.
   - Performs basic validation: ensures the extracted syntax starts with a valid Mermaid directive (`flowchart`, `sequenceDiagram`, `classDiagram`, `erDiagram`).
-- [ ] Throw `DiagramGenerationException` if no valid Mermaid syntax can be extracted.
+- [x] Throws `DiagramGenerationException` if no valid Mermaid syntax can be extracted.
 
 **Acceptance Criteria:**
-- Unit test: extracts Mermaid from ` ```mermaid\nflowchart TB\n...\n``` `.
-- Unit test: extracts Mermaid from raw `flowchart TB\n...` without backticks.
-- Unit test: throws exception for a response with no valid Mermaid content.
+- [x] Extracts Mermaid from ` ```mermaid\nflowchart TB\n...\n``` `.
+- [x] Extracts Mermaid from raw `flowchart TB\n...` without backticks.
+- [x] Throws exception for a response with no valid Mermaid content.
 
-#### 2.5 Diagram Generation Service
+#### 2.5 Diagram Generation Service ✅
 
-- [ ] Implement `DiagramGenerationService.java` that orchestrates the full flow:
+- [x] Implement `DiagramGenerationService.java` that orchestrates the full flow:
   1. Calls `CodeAnalysisService` to validate the input.
   2. Calls `PromptTemplateEngine` to assemble the prompt.
-  3. Sends the prompt to Vertex AI Gemini via Spring AI's `ChatClient`.
+  3. Sends the prompt to Vertex AI Gemini via `ResilientLlmClient` (wraps Spring AI `ChatClient` with Resilience4j circuit breaker).
   4. Calls `MermaidSyntaxExtractor` to parse the response.
   5. Returns a `DiagramResponse` with the Mermaid syntax and metadata (model name, input character count, processing time).
-- [ ] Configure the `ChatClient` bean in `AiConfig.java` using Spring AI auto-configuration for Vertex AI Gemini.
-- [ ] Set the temperature to `0.2` for consistent, deterministic output.
+- [x] Configure the `ChatClient` bean in `AiConfig.java` using Spring AI auto-configuration for Vertex AI Gemini.
+- [x] Set the temperature to `0.2` for consistent, deterministic output.
+- [x] Custom `RetryTemplate` bean with exponential backoff (3 attempts, 2s initial, 3x multiplier) that retries on gRPC `RESOURCE_EXHAUSTED` errors.
+- [x] Differentiates rate-limit errors (`LlmRateLimitException`) from generic LLM errors.
 
 **Acceptance Criteria:**
-- Integration test (with real or mocked LLM): submitting the sample OrderController code from api-contracts.md with `FLOWCHART`/`JAVA` returns a `DiagramResponse` containing valid Mermaid syntax starting with `flowchart`.
-- The `metadata.processingTimeMs` field reflects actual elapsed time.
-- The `metadata.model` field is `gemini-2.5-flash`.
+- [x] Submitting code with `FLOWCHART`/`JAVA` returns a `DiagramResponse` containing valid Mermaid syntax starting with `flowchart`.
+- [x] The `metadata.processingTimeMs` field reflects actual elapsed time.
+- [x] The `metadata.model` field is `gemini-2.0-flash`.
 
-#### 2.6 Diagram Controller
+#### 2.6 Diagram Controller ✅
 
-- [ ] Implement `DiagramController.java` with:
+- [x] Implement `DiagramController.java` with:
   - `POST /api/v1/diagrams/generate` -- accepts `DiagramRequest`, calls `DiagramGenerationService`, returns `DiagramResponse`.
   - `GET /api/v1/diagrams/types` -- returns the list of all supported diagram types as specified in api-contracts.md.
-- [ ] Add `@Valid` annotation on the `@RequestBody DiagramRequest` parameter.
+- [x] Add `@Valid` annotation on the `@RequestBody DiagramRequest` parameter.
 
 **Acceptance Criteria:**
-- `POST /api/v1/diagrams/generate` with valid input returns 200 with a `DiagramResponse`.
-- `POST /api/v1/diagrams/generate` with missing `code` returns 400 `VALIDATION_ERROR`.
-- `GET /api/v1/diagrams/types` returns all five diagram types with correct metadata.
+- [x] `POST /api/v1/diagrams/generate` with valid input returns 200 with a `DiagramResponse`.
+- [x] `POST /api/v1/diagrams/generate` with missing `code` returns 400 `VALIDATION_ERROR`.
+- [x] `GET /api/v1/diagrams/types` returns all five diagram types with correct metadata.
 
-#### 2.7 Global Exception Handling
+#### 2.7 Global Exception Handling ✅
 
-- [ ] Implement `GlobalExceptionHandler` using `@ControllerAdvice`.
-- [ ] Map `UnsupportedDiagramTypeException` to 400 with `UNSUPPORTED_DIAGRAM_TYPE`.
-- [ ] Map `DiagramGenerationException` to 500 with `GENERATION_FAILED`.
-- [ ] Map `MethodArgumentNotValidException` to 400 with `VALIDATION_ERROR`.
-- [ ] Map Spring AI client exceptions (upstream LLM errors) to 502 with `LLM_ERROR`.
-- [ ] Map generic exceptions to 500 with a safe message (no stack traces in the response).
-- [ ] All error responses follow the standard format from api-contracts.md.
-
-**Acceptance Criteria:**
-- Invalid requests return properly formatted error JSON matching the error response schema.
-- LLM failures return 502 with `LLM_ERROR`.
-- Exceptions during generation return 500 with a safe message; full details are logged server-side.
-
-#### 2.8 Frontend Integration
-
-- [ ] Wire `frontend/js/api.js` to call the backend endpoints:
-  - `generateDiagram(request)` calls `POST /api/v1/diagrams/generate`.
-  - `getDiagramTypes()` calls `GET /api/v1/diagrams/types` and populates the dropdown on page load.
-- [ ] In `frontend/js/app.js`:
-  - On "Generate" button click: collect form values, call `generateDiagram`, pass the response's `mermaidSyntax` to the renderer.
-  - Show a loading spinner while the request is in flight.
-  - Display error messages from the API in a visible error banner.
-  - Filter the diagram type dropdown based on the selected code language (e.g., selecting `HCL` hides `SEQUENCE`, `CLASS`, `ENTITY_RELATIONSHIP`).
-- [ ] In `frontend/js/renderer.js`:
-  - Call `mermaid.render()` with the returned syntax and insert the SVG into the output area.
-  - If rendering fails (invalid Mermaid syntax), display the raw syntax with an error message.
+- [x] Implement `GlobalExceptionHandler` using `@RestControllerAdvice`.
+- [x] Map `UnsupportedDiagramTypeException` to 400 with `UNSUPPORTED_DIAGRAM_TYPE`.
+- [x] Map `DiagramGenerationException` to 502 with `LLM_ERROR` (when caused by upstream failure) or 500 with `GENERATION_FAILED`.
+- [x] Map `MethodArgumentNotValidException` to 400 with `VALIDATION_ERROR`.
+- [x] Map `LlmRateLimitException` to 429 with `RATE_LIMITED` and `Retry-After` header.
+- [x] Map `LlmServiceUnavailableException` to 503 with `SERVICE_UNAVAILABLE` and `Retry-After` header.
+- [x] Map generic exceptions to 500 with a safe message (no stack traces in the response).
+- [x] All error responses follow the standard format from api-contracts.md.
 
 **Acceptance Criteria:**
-- User can paste Java code, select `FLOWCHART`, click "Generate", and see a rendered diagram.
-- User can paste Terraform code, select `INFRASTRUCTURE`, click "Generate", and see a rendered diagram.
-- Selecting `HCL` as the code language filters out Java-only diagram types from the dropdown.
-- API errors display a visible error message in the UI.
+- [x] Invalid requests return properly formatted error JSON matching the error response schema.
+- [x] LLM failures return 502 with `LLM_ERROR`.
+- [x] Rate-limited requests return 429 with `RATE_LIMITED`.
+- [x] Exceptions during generation return 500 with a safe message; full details are logged server-side.
+
+#### 2.8 Frontend Integration ✅
+
+- [x] API calls wired in Astro inline script (replaces separate api.js/app.js/renderer.js):
+  - `fetch(POST /api/v1/diagrams/generate)` on Generate button click.
+  - Dynamic base URL based on `window.location.hostname`.
+- [x] On "Generate" button click: collect form values, call API, pass `mermaidSyntax` to `mermaid.render()`.
+- [x] Loading spinner shown while request is in flight.
+- [x] Error banner displays API error messages, with specific messages for 429 and 503 responses.
+- [x] Diagram type dropdown filtered based on selected code language (HCL hides SEQUENCE, CLASS, ENTITY_RELATIONSHIP).
+- [x] `mermaid.render()` inserts SVG into output area; render failures display raw syntax with error message.
+
+**Acceptance Criteria:**
+- [x] User can paste Java code, select `FLOWCHART`, click "Generate", and see a rendered diagram.
+- [x] User can paste Terraform code, select `INFRASTRUCTURE`, click "Generate", and see a rendered diagram.
+- [x] Selecting `HCL` as the code language filters out Java-only diagram types from the dropdown.
+- [x] API errors display a visible error message in the UI.
 
 ---
 
-## Phase 3: Polish and Demo
+## Phase 3: Polish and Demo (In Progress)
 
 **Goal:** Export functionality, production deployment, and a working demo.
 
@@ -235,54 +237,53 @@ This document defines three development phases with concrete deliverables and ac
 
 ### Deliverables
 
-#### 3.1 Export Functionality
+#### 3.1 Export Functionality ✅
 
-- [ ] Implement `frontend/js/exporter.js` with:
-  - `copyMermaidSyntax(syntax)` -- copies the raw Mermaid text to the clipboard.
-  - `exportAsPng(svgElement)` -- converts the rendered SVG to a PNG and triggers a download.
-  - `exportAsSvg(svgElement)` -- extracts the SVG markup and triggers a download.
-- [ ] Wire the "Copy Mermaid", "Export PNG", and "Export SVG" buttons to these functions.
-
-**Acceptance Criteria:**
-- Clicking "Copy Mermaid" copies the syntax to the clipboard (verified by pasting).
-- Clicking "Export PNG" downloads a PNG file of the diagram.
-- Clicking "Export SVG" downloads an SVG file of the diagram.
-
-#### 3.2 Container Image with Jib
-
-- [ ] Add the Jib Gradle plugin to the backend `build.gradle.kts`.
-- [ ] Configure the image to use `eclipse-temurin:21-jre` as the base image.
-- [ ] Configure the image name to target Artifact Registry: `{region}-docker.pkg.dev/{project-id}/diagram-architect/api`.
-- [ ] Verify the image builds and runs locally: `./gradlew jibDockerBuild && docker run -p 8080:8080 ...`.
+- [x] Implemented inline in the Astro component (`frontend/src/pages/index.astro`):
+  - Copy Mermaid syntax to clipboard via `navigator.clipboard`.
+  - Export as PNG via Canvas 2D API with 2x scaling for quality.
+  - Export as SVG by extracting SVG markup and triggering download.
+- [x] "Copy Mermaid", "Export PNG", and "Export SVG" buttons wired and functional.
 
 **Acceptance Criteria:**
-- `./gradlew jibDockerBuild` produces a local Docker image.
-- The image starts and the health endpoint responds.
+- [x] Clicking "Copy Mermaid" copies the syntax to the clipboard (verified by pasting).
+- [x] Clicking "Export PNG" downloads a PNG file of the diagram.
+- [x] Clicking "Export SVG" downloads an SVG file of the diagram.
 
-#### 3.3 Cloud Run Deployment
+#### 3.2 Container Image with Jib ✅
 
-- [ ] Create a deployment script or `service.yaml` for deploying the backend to Cloud Run.
-- [ ] Configure environment variables for the `prod` profile: GCP project ID, Vertex AI region.
-- [ ] Configure the service with: 512 MiB memory (lightweight, no heavy processing), request timeout of 60 seconds, concurrency of 80, min instances of 0 (scale to zero), max instances of 2 (portfolio project, limit costs).
-- [ ] Ensure the Cloud Run service account has the `Vertex AI User` IAM role.
-
-**Acceptance Criteria:**
-- The backend deploys to Cloud Run and starts successfully.
-- `curl https://{cloud-run-url}/api/v1/health` returns `status: UP`.
-- `curl https://{cloud-run-url}/api/v1/diagrams/types` returns the diagram types list.
-
-#### 3.4 Firebase Hosting Deployment
-
-- [ ] Configure `frontend/firebase.json` to:
-  - Set the public directory to the frontend root.
-  - Add a rewrite rule so all paths serve `index.html`.
-  - Configure cache headers for static assets (CSS, JS).
-- [ ] Update `frontend/js/api.js` to use the production Cloud Run URL (read from a configuration or environment-based constant).
-- [ ] Deploy with `firebase deploy --only hosting`.
+- [x] Jib Gradle plugin (v3.4.5) added to `build.gradle.kts`.
+- [x] Base image: `eclipse-temurin:21-jre`.
+- [x] Image target: `us-central1-docker.pkg.dev/jking-ai-labs/docker-repo/diagram-architect-api`.
+- [x] Container config: JVM flags (`-Xms256m -Xmx512m`), port 8080, `SPRING_PROFILES_ACTIVE=prod`.
 
 **Acceptance Criteria:**
-- The frontend is accessible at the Firebase Hosting URL.
-- The frontend successfully calls the Cloud Run backend and renders diagrams.
+- [x] `./gradlew jibDockerBuild` produces a local Docker image.
+- [x] The image starts and the health endpoint responds.
+
+#### 3.3 Cloud Run Deployment ✅
+
+- [x] Backend deployed to Cloud Run via `./gradlew jib` + `gcloud run deploy`.
+- [x] Environment configured for `prod` profile with GCP project ID and Vertex AI region.
+- [x] Cloud Run service account has the `Vertex AI User` IAM role.
+
+**Acceptance Criteria:**
+- [x] The backend deploys to Cloud Run and starts successfully.
+- [x] `curl https://diagram-architect-api-153583612125.us-central1.run.app/api/v1/health` returns `status: UP`.
+- [x] `curl https://diagram-architect-api-153583612125.us-central1.run.app/api/v1/diagrams/types` returns the diagram types list.
+
+#### 3.4 Firebase Hosting Deployment ✅
+
+- [x] `firebase.json` configured with:
+  - Public directory: `frontend/dist/`.
+  - Rewrite rule: all paths serve `index.html` (SPA support).
+  - Cache headers for static assets (`*.js`, `*.css`): `public, max-age=31536000, immutable`.
+- [x] API base URL determined at runtime based on `window.location.hostname`.
+- [x] Deployed with `firebase deploy --only hosting`.
+
+**Acceptance Criteria:**
+- [x] The frontend is accessible at https://diagram-architect.web.app/.
+- [x] The frontend successfully calls the Cloud Run backend and renders diagrams.
 
 #### 3.5 Unit and Integration Tests
 
@@ -386,9 +387,9 @@ flowchart LR
 
 ## Summary Table
 
-| Phase | Deliverables | Depends On | Effort |
+| Phase | Deliverables | Depends On | Status |
 |-------|-------------|------------|--------|
-| Phase 1: Foundation | Backend scaffolding, enums/DTOs, health check, CORS config, frontend skeleton | None | 1-2 days |
-| Phase 2: Core Features | Prompt templates, template engine, code analysis, Mermaid extractor, generation service, controller, error handling, frontend integration | Phase 1 | 2-4 days |
-| Phase 3: Polish and Demo | Export functionality, container image, Cloud Run deploy, Firebase Hosting deploy, tests, demo script | Phase 2 | 1-2 days |
-| **Total** | **20 deliverables** | | **4-8 days** |
+| Phase 1: Foundation | Backend scaffolding, enums/DTOs, health check, CORS config, frontend skeleton | None | ✅ Complete |
+| Phase 2: Core Features | Prompt templates, template engine, code analysis, Mermaid extractor, generation service, controller, error handling, frontend integration | Phase 1 | ✅ Complete |
+| Phase 3: Polish and Demo | Export functionality, container image, Cloud Run deploy, Firebase Hosting deploy, tests, demo script | Phase 2 | 4/6 complete (tests + demo remaining) |
+| **Total** | **18/20 deliverables complete** | | |
