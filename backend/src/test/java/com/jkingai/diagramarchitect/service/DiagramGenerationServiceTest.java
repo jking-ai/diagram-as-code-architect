@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.ai.chat.client.ChatClient;
 
 import java.lang.reflect.Field;
 
@@ -25,16 +24,14 @@ class DiagramGenerationServiceTest {
     @Mock private CodeAnalysisService codeAnalysisService;
     @Mock private PromptTemplateEngine promptTemplateEngine;
     @Mock private MermaidSyntaxExtractor mermaidSyntaxExtractor;
-    @Mock private ChatClient chatClient;
-    @Mock private ChatClient.ChatClientRequestSpec requestSpec;
-    @Mock private ChatClient.CallResponseSpec callResponseSpec;
+    @Mock private ResilientLlmClient resilientLlmClient;
 
     private DiagramGenerationService service;
 
     @BeforeEach
     void setUp() throws Exception {
         service = new DiagramGenerationService(
-                codeAnalysisService, promptTemplateEngine, mermaidSyntaxExtractor, chatClient);
+                codeAnalysisService, promptTemplateEngine, mermaidSyntaxExtractor, resilientLlmClient);
         Field modelField = DiagramGenerationService.class.getDeclaredField("modelName");
         modelField.setAccessible(true);
         modelField.set(service, "gemini-2.0-flash");
@@ -49,10 +46,8 @@ class DiagramGenerationServiceTest {
                 .thenReturn("public class Hello {}");
         when(promptTemplateEngine.assemblePrompt(any(), any(), anyString(), any()))
                 .thenReturn("assembled prompt");
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(anyString())).thenReturn(requestSpec);
-        when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.content()).thenReturn("```mermaid\nflowchart TB\n    A --> B\n```");
+        when(resilientLlmClient.call(anyString()))
+                .thenReturn("```mermaid\nflowchart TB\n    A --> B\n```");
         when(mermaidSyntaxExtractor.extract(anyString()))
                 .thenReturn("flowchart TB\n    A --> B");
 
@@ -98,9 +93,8 @@ class DiagramGenerationServiceTest {
                 .thenReturn("code");
         when(promptTemplateEngine.assemblePrompt(any(), any(), anyString(), any()))
                 .thenReturn("prompt");
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(anyString())).thenReturn(requestSpec);
-        when(requestSpec.call()).thenThrow(new RuntimeException("LLM unavailable"));
+        when(resilientLlmClient.call(anyString()))
+                .thenThrow(new RuntimeException("LLM unavailable"));
 
         DiagramGenerationException ex = assertThrows(DiagramGenerationException.class,
                 () -> service.generate(request));
@@ -117,10 +111,8 @@ class DiagramGenerationServiceTest {
                 .thenReturn("code");
         when(promptTemplateEngine.assemblePrompt(any(), any(), anyString(), any()))
                 .thenReturn("prompt");
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(anyString())).thenReturn(requestSpec);
-        when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.content()).thenReturn("no valid mermaid here");
+        when(resilientLlmClient.call(anyString()))
+                .thenReturn("no valid mermaid here");
         when(mermaidSyntaxExtractor.extract(anyString()))
                 .thenThrow(new DiagramGenerationException("no valid mermaid"));
 
@@ -136,10 +128,8 @@ class DiagramGenerationServiceTest {
                 .thenReturn("code");
         when(promptTemplateEngine.assemblePrompt(any(), any(), anyString(), eq("Focus on auth")))
                 .thenReturn("prompt");
-        when(chatClient.prompt()).thenReturn(requestSpec);
-        when(requestSpec.user(anyString())).thenReturn(requestSpec);
-        when(requestSpec.call()).thenReturn(callResponseSpec);
-        when(callResponseSpec.content()).thenReturn("flowchart TB\n    A --> B");
+        when(resilientLlmClient.call(anyString()))
+                .thenReturn("flowchart TB\n    A --> B");
         when(mermaidSyntaxExtractor.extract(anyString())).thenReturn("flowchart TB\n    A --> B");
 
         DiagramResponse response = service.generate(request);

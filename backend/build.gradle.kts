@@ -32,8 +32,10 @@ dependencies {
     implementation("org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini")
     implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
     implementation("org.springframework.boot:spring-boot-starter-aop")
+    implementation("org.springframework.boot:spring-boot-starter-security")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.security:spring-security-test")
 }
 
 tasks.withType<Test> {

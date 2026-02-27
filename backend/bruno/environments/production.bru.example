@@ -1,0 +1,4 @@
+vars {
+  host: https://diagram-architect-api-vgsrokkhba-uc.a.run.app
+  apiKey: <your-production-api-key>
+}

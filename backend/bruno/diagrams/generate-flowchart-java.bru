@@ -1,0 +1,30 @@
+meta {
+  name: Generate Flowchart (Java)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{host}}/api/v1/diagrams/generate
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "code": "public class OrderController {\n    private final OrderService orderService;\n    @PostMapping\n    public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {\n        Order order = orderService.create(request);\n        return ResponseEntity.ok(order);\n    }\n}",
+    "diagramType": "FLOWCHART",
+    "codeLanguage": "JAVA"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.diagramType: eq FLOWCHART
+  res.body.codeLanguage: eq JAVA
+  res.body.mermaidSyntax: contains flowchart
+}

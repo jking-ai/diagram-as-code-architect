@@ -9,18 +9,27 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest(properties = "spring.main.allow-bean-definition-overriding=true")
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "app.security.api-key=test-api-key",
+        "app.security.allowed-origins=*"
+})
 class DiagramGenerationIntegrationTest {
+
+    private static final String API_KEY_HEADER = "X-API-Key";
+    private static final String TEST_API_KEY = "test-api-key";
 
     @TestConfiguration
     static class MockChatClientConfig {
@@ -63,6 +72,7 @@ class DiagramGenerationIntegrationTest {
         String javaCode = "@RestController\\n@RequestMapping(\\\"/api/v1/orders\\\")\\npublic class OrderController {\\n    private final OrderService orderService;\\n}";
 
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\": \"" + javaCode + "\", \"diagramType\": \"FLOWCHART\", \"codeLanguage\": \"JAVA\"}"))
                 .andExpect(status().isOk())
@@ -77,6 +87,7 @@ class DiagramGenerationIntegrationTest {
     @Test
     void generateWithContext_endToEnd_returns200() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"code\": \"public class Hello {}\", \"diagramType\": \"FLOWCHART\", \"codeLanguage\": \"JAVA\", \"context\": \"Focus on main method\"}"))
                 .andExpect(status().isOk())
@@ -86,9 +97,26 @@ class DiagramGenerationIntegrationTest {
     @Test
     void generateWithInvalidInput_endToEnd_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"diagramType\": \"FLOWCHART\", \"codeLanguage\": \"JAVA\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void generate_missingApiKey_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"code\": \"class A {}\", \"diagramType\": \"FLOWCHART\", \"codeLanguage\": \"JAVA\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void health_noApiKey_returns200() throws Exception {
+        mockMvc.perform(get("/api/v1/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
     }
 }

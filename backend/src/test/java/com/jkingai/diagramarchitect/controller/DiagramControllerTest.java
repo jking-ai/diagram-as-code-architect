@@ -7,10 +7,13 @@ import com.jkingai.diagramarchitect.exception.DiagramGenerationException;
 import com.jkingai.diagramarchitect.exception.UnsupportedDiagramTypeException;
 import com.jkingai.diagramarchitect.model.CodeLanguage;
 import com.jkingai.diagramarchitect.model.DiagramType;
+import com.jkingai.diagramarchitect.config.SecurityConfig;
 import com.jkingai.diagramarchitect.service.DiagramGenerationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,7 +28,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(DiagramController.class)
+@Import(SecurityConfig.class)
+@TestPropertySource(properties = {
+        "app.security.api-key=test-api-key",
+        "app.security.allowed-origins=*"
+})
 class DiagramControllerTest {
+
+    private static final String API_KEY_HEADER = "X-API-Key";
+    private static final String TEST_API_KEY = "test-api-key";
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -42,6 +53,7 @@ class DiagramControllerTest {
         when(generationService.generate(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "public class Hello {}", "diagramType": "FLOWCHART", "codeLanguage": "JAVA"}
@@ -56,6 +68,7 @@ class DiagramControllerTest {
     @Test
     void generate_missingCode_returns400ValidationError() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"diagramType": "FLOWCHART", "codeLanguage": "JAVA"}
@@ -67,6 +80,7 @@ class DiagramControllerTest {
     @Test
     void generate_blankCode_returns400ValidationError() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "   ", "diagramType": "FLOWCHART", "codeLanguage": "JAVA"}
@@ -78,6 +92,7 @@ class DiagramControllerTest {
     @Test
     void generate_invalidDiagramType_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "class A {}", "diagramType": "INVALID", "codeLanguage": "JAVA"}
@@ -89,6 +104,7 @@ class DiagramControllerTest {
     @Test
     void generate_invalidCodeLanguage_returns400() throws Exception {
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "class A {}", "diagramType": "FLOWCHART", "codeLanguage": "PYTHON"}
@@ -103,6 +119,7 @@ class DiagramControllerTest {
                 .thenThrow(new UnsupportedDiagramTypeException("SEQUENCE not supported for HCL"));
 
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "resource {}", "diagramType": "SEQUENCE", "codeLanguage": "JAVA"}
@@ -117,6 +134,7 @@ class DiagramControllerTest {
                 .thenThrow(new DiagramGenerationException("LLM failed", new RuntimeException("upstream error")));
 
         mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .header(API_KEY_HEADER, TEST_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"code": "class A {}", "diagramType": "FLOWCHART", "codeLanguage": "JAVA"}
@@ -126,8 +144,20 @@ class DiagramControllerTest {
     }
 
     @Test
+    void generate_missingApiKey_returns401() throws Exception {
+        mockMvc.perform(post("/api/v1/diagrams/generate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"code": "class A {}", "diagramType": "FLOWCHART", "codeLanguage": "JAVA"}
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("UNAUTHORIZED"));
+    }
+
+    @Test
     void getTypes_returns200WithAllFiveTypes() throws Exception {
-        mockMvc.perform(get("/api/v1/diagrams/types"))
+        mockMvc.perform(get("/api/v1/diagrams/types")
+                        .header(API_KEY_HEADER, TEST_API_KEY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.diagramTypes", hasSize(5)))
                 .andExpect(jsonPath("$.diagramTypes[*].type",
@@ -138,7 +168,8 @@ class DiagramControllerTest {
 
     @Test
     void getTypes_flowchartSupportsJavaAndHcl() throws Exception {
-        mockMvc.perform(get("/api/v1/diagrams/types"))
+        mockMvc.perform(get("/api/v1/diagrams/types")
+                        .header(API_KEY_HEADER, TEST_API_KEY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.diagramTypes[?(@.type == 'FLOWCHART')].supportedLanguages[*]",
                         hasItem("JAVA")))

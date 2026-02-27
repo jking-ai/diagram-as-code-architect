@@ -8,6 +8,7 @@ Diagram-as-Code Architect converts Spring Boot (Java) or Terraform (HCL) source 
 
 - **Backend:** Spring Boot 3.5.11 + Spring AI 1.1.2 (Java 21) on Cloud Run
 - **Frontend:** Astro 5.17.1 single-page app with Mermaid.js 11.6.0 (CDN) on Firebase Hosting
+- **Proxy:** Firebase Cloud Function (`apiProxy`) injects API key and forwards to Cloud Run
 - **Resilience:** Resilience4j 2.2.0 circuit breaker + Spring Retry with exponential backoff
 
 ## Build & Run Commands
@@ -16,7 +17,7 @@ Diagram-as-Code Architect converts Spring Boot (Java) or Terraform (HCL) source 
 ```bash
 cd backend
 ./gradlew bootRun              # Local dev server on :8080 (uses 'local' profile)
-./gradlew test                 # Run all tests (48 tests, JUnit 5, no GCP creds needed)
+./gradlew test                 # Run all tests (52 tests, JUnit 5, no GCP creds needed)
 ./gradlew test --tests "com.jkingai.diagramarchitect.SomeTest"  # Single test class
 ./gradlew build                # Full build
 ./gradlew jibDockerBuild       # Build container image locally (no Dockerfile - uses Jib)
@@ -40,20 +41,29 @@ npm run preview                # Preview production build
 
 ### Deployment
 ```bash
-firebase deploy --only hosting  # Deploy frontend (from project root)
+firebase deploy                        # Deploy hosting + functions
+firebase deploy --only hosting         # Deploy frontend only
+firebase deploy --only functions       # Deploy proxy function only
 ```
+
+### Bruno API Tests (`backend/bruno/`)
+Open the `backend/bruno/` collection in Bruno. Select the `local` environment for local development. Copy `production.bru.example` to `production.bru` and fill in the real API key for production testing.
 
 ## Architecture
 
-### Request Flow
-`DiagramController` -> `DiagramGenerationService` (orchestrator) -> `CodeAnalysisService` (validation) -> `PromptTemplateEngine` (template assembly) -> `ResilientLlmClient` (circuit breaker) -> Spring AI `ChatClient` (Gemini call) -> `MermaidSyntaxExtractor` (parse response)
+### Request Flow (Production)
+`Browser` -> `Firebase Hosting` (`/api/**` rewrite) -> `Cloud Function (apiProxy)` (injects `X-API-Key`) -> `Cloud Run` -> `DiagramController` -> `DiagramGenerationService` -> `CodeAnalysisService` -> `PromptTemplateEngine` -> `ResilientLlmClient` -> Spring AI `ChatClient` -> `MermaidSyntaxExtractor`
+
+### Request Flow (Local Dev)
+`Browser (:4321)` -> `Backend (:8080)` (with `X-API-Key: dev-local-key-changeme` header)
 
 ### Key Design Decisions
+- **API Key authentication:** Spring Security filter (`ApiKeyAuthenticationFilter`) validates `X-API-Key` header. The key is injected server-side by the Firebase Function proxy -- never exposed in frontend code.
 - **Prompt templates** are plain text files at `backend/src/main/resources/prompt/templates/`, keyed by `{language}-{diagramType}.txt` (e.g., `java-flowchart.txt`). Cached in `ConcurrentHashMap` on first load.
 - **Mermaid.js loaded from CDN** in the Astro page, not from npm. Script tags require `is:inline` attribute for Astro to preserve them.
 - **Container images built with Jib** (Gradle plugin) -- no Dockerfile exists. Base image: `eclipse-temurin:21-jre`.
-- **CORS origins** configured per Spring profile in `application-{profile}.yml`.
-- **Frontend API base URL** is determined at runtime in `index.astro` based on `window.location.hostname`.
+- **CORS + Security** configured together in `SecurityConfig.java`. Allowed origins set per Spring profile in `application-{profile}.yml`.
+- **Frontend API base URL** is determined at runtime in `index.astro` based on `window.location.hostname`. Local dev sends API key header directly; production uses same-origin calls via the Firebase Function proxy.
 - **Retry + circuit breaker:** `ResilientLlmClient` wraps `ChatClient` with a Resilience4j `@CircuitBreaker`. A `RetryTemplate` in `AiConfig` handles transient gRPC errors with exponential backoff (3 attempts, 2s initial, 3x multiplier). `LlmRateLimitException` (429) and `LlmServiceUnavailableException` (503) are differentiated for frontend-specific error messages.
 
 ### Supported Diagram Types
@@ -66,13 +76,16 @@ firebase deploy --only hosting  # Deploy frontend (from project root)
 | INFRASTRUCTURE | No | Yes |
 
 ### API Endpoints
-- `POST /api/v1/diagrams/generate` -- Generate diagram (accepts `code`, `diagramType`, `codeLanguage`, optional `context`)
-- `GET /api/v1/diagrams/types` -- List supported diagram types
-- `GET /api/v1/health` -- Health check
+All endpoints except health and actuator require the `X-API-Key` header.
+
+- `POST /api/v1/diagrams/generate` -- Generate diagram (accepts `code`, `diagramType`, `codeLanguage`, optional `context`). **Requires `X-API-Key`.**
+- `GET /api/v1/diagrams/types` -- List supported diagram types. **Requires `X-API-Key`.**
+- `GET /api/v1/health` -- Health check (no auth required)
 
 ### Exception Handling
 | Exception | HTTP Status | Error Code |
 |---|---|---|
+| Missing/invalid API key | 401 | `UNAUTHORIZED` |
 | `UnsupportedDiagramTypeException` | 400 | `UNSUPPORTED_DIAGRAM_TYPE` |
 | `IllegalArgumentException` (code too large) | 400 | `CODE_TOO_LARGE` |
 | `MethodArgumentNotValidException` | 400 | `VALIDATION_ERROR` |
@@ -81,12 +94,24 @@ firebase deploy --only hosting  # Deploy frontend (from project root)
 | `LlmServiceUnavailableException` | 503 | `SERVICE_UNAVAILABLE` (with `Retry-After` header) |
 
 ### Spring Profiles
-- `local` -- Debug logging, reads GCP credentials from `classpath:gcp-credentials.json`
-- `prod` -- INFO logging, uses Cloud Run service account, CORS allows Firebase Hosting domains
+- `local` -- Debug logging, reads GCP credentials from `classpath:gcp-credentials.json`, API key: `dev-local-key-changeme`
+- `prod` -- INFO logging, uses Cloud Run service account, API key from `API_KEY` env var (GCP Secret Manager)
 
 ## Environment Setup
 
 Backend requires GCP credentials for Vertex AI Gemini. For local development, place a service account key at `backend/src/main/resources/gcp-credentials.json` (gitignored). In production, Cloud Run's service account (with "Vertex AI User" role) provides implicit auth.
+
+### API Key Setup
+- **Local dev:** Uses `dev-local-key-changeme` (hardcoded in `application-local.yml` and frontend dev code)
+- **Production:** Create a GCP Secret Manager secret named `DIAGRAM_ARCHITECT_API_KEY`. Set as `API_KEY` env var on Cloud Run. The Firebase Function reads it via `defineSecret('DIAGRAM_ARCHITECT_API_KEY')`.
+
+### Firebase Function Setup
+```bash
+cd functions
+npm install
+cp .env.example .env           # Edit API_TARGET if needed
+```
+The function's `DIAGRAM_ARCHITECT_API_KEY` secret must be created in GCP Secret Manager before deploying.
 
 ## Project Documentation
 
