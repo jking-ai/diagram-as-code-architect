@@ -328,6 +328,14 @@
           });
 
           if (!response.ok) {
+            if (response.status === 429) {
+              const retryAfter = response.headers.get('Retry-After') || '30';
+              throw new Error(`The AI service is experiencing high demand. Please wait ${retryAfter} seconds and try again.`);
+            }
+            if (response.status === 503) {
+              const retryAfter = response.headers.get('Retry-After') || '30';
+              throw new Error(`The AI service is temporarily unavailable. Please try again in ${retryAfter} seconds.`);
+            }
             const err = await response.json();
             throw new Error(err.message || `API error: ${response.status}`);
           }

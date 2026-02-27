@@ -5,6 +5,12 @@ spring:
   application:
     name: diagram-architect
   ai:
+    retry:
+      max-attempts: 3
+      backoff:
+        initial-interval: 2000
+        multiplier: 3
+        max-interval: 15000
     model:
       chat: vertexai
     vertex:
@@ -21,6 +27,20 @@ app:
   cors:
     allowed-origins:
       - http://localhost:5000
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      gemini:
+        sliding-window-size: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        record-exceptions:
+          - com.google.api.gax.rpc.ResourceExhaustedException
+          - io.grpc.StatusRuntimeException
+        ignore-exceptions:
+          - com.jkingai.diagramarchitect.exception.DiagramGenerationException
 
 management:
   endpoints:

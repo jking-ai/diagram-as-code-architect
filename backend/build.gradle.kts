@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.jkingai"
-version = "0.2.2"
+version = "0.3.2"
 
 java {
     toolchain {
@@ -30,6 +30,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.ai:spring-ai-starter-model-vertex-ai-gemini")
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:2.2.0")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
