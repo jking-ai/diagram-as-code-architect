@@ -9,7 +9,7 @@ flowchart TB
     end
 
     subgraph Firebase["Firebase Hosting"]
-        B[Static Frontend - HTML/JS/CSS]
+        B[Static Frontend - Astro SPA]
         C[Mermaid.js Renderer]
     end
 
@@ -20,12 +20,13 @@ flowchart TB
                 E[Diagram Generation Service]
                 F[Code Analysis Service]
                 G[Prompt Template Engine]
+                R[ResilientLlmClient - Circuit Breaker]
             end
         end
     end
 
     subgraph External["External Services"]
-        H[Vertex AI Gemini 2.5 Flash]
+        H[Vertex AI Gemini 2.0 Flash]
     end
 
     A -- "Loads app" --> B
@@ -35,8 +36,9 @@ flowchart TB
     D --> E
     E --> F
     E --> G
-    G -- "Structured prompt + code" --> H
-    H -- "Mermaid.js syntax" --> G
+    G -- "Structured prompt + code" --> R
+    R -- "Prompt with retry + circuit breaker" --> H
+    H -- "Mermaid.js syntax" --> R
 
     B -- "Renders Mermaid" --> C
 ```
@@ -50,7 +52,7 @@ There is one primary data flow:
 2. The frontend sends the code and diagram type to the `POST /api/v1/diagrams/generate` endpoint.
 3. The Code Analysis Service preprocesses the input, identifying the code language (Java or HCL) and validating it is non-empty.
 4. The Prompt Template Engine selects the appropriate prompt template for the requested diagram type and code language, then assembles the full prompt with the code embedded as context.
-5. The prompt is sent to Vertex AI Gemini 2.5 Flash via Spring AI's ChatClient.
+5. The prompt is sent to Vertex AI Gemini 2.0 Flash via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
 6. The LLM response is parsed to extract the Mermaid.js syntax block.
 7. The backend returns the Mermaid syntax and metadata to the frontend.
 8. The frontend renders the Mermaid.js diagram in the browser using the Mermaid.js library.
@@ -63,32 +65,45 @@ There is one primary data flow:
 | Service / Concern | Technology | Version | Rationale |
 |---|---|---|---|
 | Runtime | Java | 21 (LTS) | Long-term support, modern language features (records, text blocks for prompt templates) |
-| Framework | Spring Boot | 3.4.5 | Stable release compatible with Spring AI 1.0.x; mature ecosystem |
-| AI Framework | Spring AI | 1.0.1 | GA release with built-in Vertex AI Gemini ChatClient and structured output support |
+| Framework | Spring Boot | 3.5.11 | Stable release compatible with Spring AI 1.1.x; mature ecosystem |
+| AI Framework | Spring AI | 1.1.2 (`spring-ai-starter-model-vertex-ai-gemini`) | GA release with built-in Vertex AI Gemini ChatClient and structured output support |
 | Build Tool | Gradle (Kotlin DSL) | 8.x | Convention-over-configuration, strong Spring Boot plugin support |
-| Chat Model | Vertex AI Gemini 2.5 Flash | -- | Fast, cost-effective generative model with strong code understanding; ideal for structured output tasks |
-| Frontend Framework | Vanilla HTML/CSS/JS | -- | Minimal complexity; no build step needed for a single-page rendering tool |
-| Diagram Rendering | Mermaid.js | 11.6.0 | Industry-standard diagram-as-code library; renders directly in the browser |
+| Chat Model | Vertex AI Gemini 2.0 Flash | -- | Fast, cost-effective generative model with strong code understanding; ideal for structured output tasks |
+| Resilience | Resilience4j | 2.2.0 | Circuit breaker and retry for LLM calls; prevents cascading failures from rate limits |
+| Frontend Framework | Astro | 5.17.1 | Lightweight static-site generator; single-page app with inline scripts and CDN-loaded Mermaid.js |
+| Diagram Rendering | Mermaid.js | 11.6.0 (CDN) | Industry-standard diagram-as-code library; renders directly in the browser |
 | Frontend Hosting | Firebase Hosting | -- | Fast CDN-backed static hosting; already configured in the GCP project |
-| Containerization | Docker (Jib) | -- | Jib builds optimized container images without a Dockerfile |
+| Containerization | Jib (Gradle plugin) | 3.4.5 | Builds optimized container images without a Dockerfile; base image `eclipse-temurin:21-jre` |
 | Deployment | Google Cloud Run | v2 | Serverless container hosting; scales to zero; IAM-integrated |
 
 ---
 
 ## Key Design Decisions and Trade-offs
 
-### 1. Gemini 2.5 Flash vs. Gemini 2.5 Pro for Code Analysis
+### 1. Gemini 2.0 Flash vs. Gemini 2.0 Pro for Code Analysis
 
-**Decision:** Use Gemini 2.5 Flash.
+**Decision:** Use Gemini 2.0 Flash.
 
 **Rationale:**
-- Gemini 2.5 Flash offers strong code understanding at significantly lower latency and cost than Pro.
+- Gemini 2.0 Flash offers strong code understanding at significantly lower latency and cost than Pro.
 - Diagram generation from code is a structured extraction task, not a deep reasoning task, making Flash's capabilities sufficient.
 - The lower latency provides a better user experience for an interactive tool.
 
 **Trade-off:** For extremely large or complex codebases, Pro might produce slightly better structural analysis. The input size limit and prompt design mitigate this.
 
-### 2. Stateless Backend (No Database)
+### 2. Retry and Circuit Breaker for LLM Calls
+
+**Decision:** Wrap ChatClient calls with Resilience4j circuit breaker and Spring Retry with exponential backoff.
+
+**Rationale:**
+- Vertex AI Gemini can return gRPC `RESOURCE_EXHAUSTED` (429) errors under load.
+- A `RetryTemplate` with exponential backoff (3 attempts, 2s initial, 3x multiplier) handles transient rate limits.
+- A Resilience4j circuit breaker (`ResilientLlmClient`) opens after repeated failures, failing fast instead of queuing requests to an unhealthy service.
+- Differentiated exception types (`LlmRateLimitException`, `LlmServiceUnavailableException`) allow the frontend to show appropriate retry messaging.
+
+**Trade-off:** Adds complexity to the LLM call path. Acceptable because rate-limit errors were observed in production and caused poor user experience without retry logic.
+
+### 3. Stateless Backend (No Database)
 
 **Decision:** The backend is fully stateless with no database. Diagrams are generated on-the-fly and returned in the API response.
 
@@ -100,7 +115,7 @@ There is one primary data flow:
 
 **Trade-off:** No server-side history or saved diagrams. Acceptable for a developer productivity tool where output is typically copy-pasted into documentation.
 
-### 3. Prompt Engineering for Valid Mermaid Syntax
+### 4. Prompt Engineering for Valid Mermaid Syntax
 
 **Decision:** Use carefully designed prompt templates that include Mermaid syntax rules, examples of valid output, and explicit instructions for the LLM to produce only the Mermaid code block.
 
@@ -111,7 +126,7 @@ There is one primary data flow:
 
 **Trade-off:** Prompt templates are tightly coupled to Mermaid syntax versions. If Mermaid.js introduces breaking syntax changes, prompts must be updated.
 
-### 4. Supported Input Types
+### 5. Supported Input Types
 
 **Decision:** Support two input types at launch: Spring Boot Java source code and Terraform HCL files.
 
@@ -120,7 +135,7 @@ There is one primary data flow:
 - Java and HCL have very different structures, demonstrating the system's flexibility.
 - Additional languages (Python, Go, Kubernetes YAML) can be added by creating new prompt templates without changing the core architecture.
 
-### 5. Supported Diagram Types
+### 6. Supported Diagram Types
 
 **Decision:** Support these Mermaid diagram types:
 
@@ -132,7 +147,7 @@ There is one primary data flow:
 | `ENTITY_RELATIONSHIP` | Java | JPA entity relationships derived from annotations |
 | `INFRASTRUCTURE` | HCL | Cloud infrastructure topology from Terraform resources |
 
-### 6. Frontend on Firebase Hosting vs. Embedded in Spring Boot
+### 7. Frontend on Firebase Hosting vs. Embedded in Spring Boot
 
 **Decision:** Host the frontend separately on Firebase Hosting as a static site.
 
@@ -158,16 +173,18 @@ diagram-as-code-architect/
 |   |   |   |-- java/com/jkingai/diagramarchitect/
 |   |   |   |   |-- DiagramArchitectApplication.java          # Spring Boot entry point
 |   |   |   |   |-- config/
-|   |   |   |   |   |-- AiConfig.java                         # Spring AI ChatClient bean configuration
+|   |   |   |   |   |-- AiConfig.java                         # ChatClient, RetryTemplate, rate-limit detection
 |   |   |   |   |   |-- CorsConfig.java                       # CORS configuration for Firebase frontend
 |   |   |   |   |-- controller/
 |   |   |   |   |   |-- DiagramController.java                # REST endpoints for diagram generation
+|   |   |   |   |   |-- GlobalExceptionHandler.java           # @ControllerAdvice for consistent error responses
 |   |   |   |   |   |-- HealthController.java                 # Health check endpoint
 |   |   |   |   |-- service/
 |   |   |   |   |   |-- DiagramGenerationService.java         # Orchestrates code analysis and diagram generation
 |   |   |   |   |   |-- CodeAnalysisService.java              # Validates and preprocesses code input
 |   |   |   |   |   |-- PromptTemplateEngine.java             # Selects and assembles prompt templates
 |   |   |   |   |   |-- MermaidSyntaxExtractor.java           # Extracts and validates Mermaid blocks from LLM response
+|   |   |   |   |   |-- ResilientLlmClient.java               # Circuit breaker wrapper around ChatClient
 |   |   |   |   |-- model/
 |   |   |   |   |   |-- DiagramType.java                      # Enum: FLOWCHART, SEQUENCE, CLASS, ENTITY_RELATIONSHIP, INFRASTRUCTURE
 |   |   |   |   |   |-- CodeLanguage.java                     # Enum: JAVA, HCL
@@ -177,8 +194,9 @@ diagram-as-code-architect/
 |   |   |   |   |   |-- DiagramTypeInfo.java                  # DTO for listing supported diagram types
 |   |   |   |   |   |-- ErrorResponse.java                    # Standard error response DTO
 |   |   |   |   |-- exception/
-|   |   |   |   |   |-- GlobalExceptionHandler.java           # @ControllerAdvice for consistent error responses
 |   |   |   |   |   |-- DiagramGenerationException.java       # Generation failures
+|   |   |   |   |   |-- LlmRateLimitException.java            # 429 rate-limit errors from Vertex AI
+|   |   |   |   |   |-- LlmServiceUnavailableException.java   # 503 circuit breaker open
 |   |   |   |   |   |-- UnsupportedDiagramTypeException.java  # Invalid diagram type for code language
 |   |   |   |   |-- prompt/
 |   |   |   |       |-- templates/
@@ -189,7 +207,7 @@ diagram-as-code-architect/
 |   |   |   |           |-- hcl-flowchart.txt                 # Prompt template for Terraform flowchart diagrams
 |   |   |   |           |-- hcl-infrastructure.txt            # Prompt template for Terraform infrastructure diagrams
 |   |   |   |-- resources/
-|   |   |       |-- application.yml                           # Main configuration
+|   |   |       |-- application.yml                           # Main config (includes resilience4j circuit breaker)
 |   |   |       |-- application-local.yml                     # Local dev overrides
 |   |   |       |-- application-prod.yml                      # Production (Cloud Run) overrides
 |   |   |-- test/
@@ -201,21 +219,25 @@ diagram-as-code-architect/
 |   |           |   |-- MermaidSyntaxExtractorTest.java
 |   |           |-- controller/
 |   |           |   |-- DiagramControllerTest.java
-|   |           |-- integration/
-|   |               |-- DiagramGenerationIntegrationTest.java  # End-to-end test with mocked LLM
+|   |           |   |-- DiagramGenerationIntegrationTest.java  # End-to-end test with mocked LLM
 |   |           |-- resources/
 |   |               |-- sample-spring-boot-code.java           # Sample input for tests
 |   |               |-- sample-terraform.tf                    # Sample input for tests
 |   |               |-- expected-flowchart.mmd                 # Expected output for validation
 |-- frontend/
-|   |-- index.html                                            # Main HTML page
-|   |-- css/
-|   |   |-- style.css                                         # Application styles (dark theme)
-|   |-- js/
-|   |   |-- app.js                                            # Main application logic
-|   |   |-- api.js                                            # API client for backend calls
-|   |   |-- renderer.js                                       # Mermaid.js initialization and rendering
-|   |   |-- exporter.js                                       # PNG/SVG export functionality
-|   |-- firebase.json                                         # Firebase Hosting configuration
-|   |-- .firebaserc                                           # Firebase project alias
+|   |-- astro.config.mjs                                      # Astro configuration
+|   |-- package.json
+|   |-- src/
+|   |   |-- pages/
+|   |       |-- index.astro                                   # Single-page app (UI, API calls, Mermaid rendering, export)
+|-- demo/
+|   |-- demo.sh                                               # End-to-end demo script (curl + jq)
+|   |-- sample-order-service.java                             # Sample Spring Boot code for demo
+|   |-- sample-infrastructure.tf                              # Sample Terraform code for demo
+|-- docs/
+|   |-- architecture.md                                       # System architecture and design decisions
+|   |-- api-contracts.md                                      # API endpoint specifications
+|   |-- milestones.md                                         # Development phases and deliverables
+|-- firebase.json                                             # Firebase Hosting configuration
+|-- .firebaserc                                               # Firebase project alias
 ```

@@ -93,7 +93,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "FLOWCHART",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.5-flash",
+    "model": "gemini-2.0-flash",
     "inputCharacters": 1847,
     "processingTimeMs": 2130
   }
@@ -121,7 +121,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "SEQUENCE",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.5-flash",
+    "model": "gemini-2.0-flash",
     "inputCharacters": 1420,
     "processingTimeMs": 2450
   }
@@ -148,7 +148,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "INFRASTRUCTURE",
   "codeLanguage": "HCL",
   "metadata": {
-    "model": "gemini-2.5-flash",
+    "model": "gemini-2.0-flash",
     "inputCharacters": 1135,
     "processingTimeMs": 1980
   }
@@ -175,7 +175,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "CLASS",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.5-flash",
+    "model": "gemini-2.0-flash",
     "inputCharacters": 892,
     "processingTimeMs": 1750
   }
@@ -307,7 +307,7 @@ curl http://localhost:8080/api/v1/health
     "chatModel": {
       "status": "UP",
       "details": {
-        "model": "gemini-2.5-flash",
+        "model": "gemini-2.0-flash",
         "provider": "vertexai"
       }
     }
@@ -363,8 +363,9 @@ All error responses follow a consistent structure:
 | `INVALID_CODE_LANGUAGE` | 400 | The code language value is not one of the supported enums |
 | `INVALID_DIAGRAM_TYPE` | 400 | The diagram type value is not one of the supported enums |
 | `GENERATION_FAILED` | 500 | Diagram generation failed during processing |
+| `RATE_LIMITED` | 429 | Vertex AI rate limit exceeded (gRPC `RESOURCE_EXHAUSTED`). Response includes `Retry-After` header (seconds). |
 | `LLM_ERROR` | 502 | The upstream Vertex AI Gemini service returned an error or timed out |
-| `SERVICE_UNAVAILABLE` | 503 | The Vertex AI service is unreachable |
+| `SERVICE_UNAVAILABLE` | 503 | Circuit breaker is open due to repeated LLM failures; requests are failing fast. Response includes `Retry-After` header (seconds). |
 
 ---
 
