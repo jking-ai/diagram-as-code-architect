@@ -42,10 +42,6 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
-    systemProperty("spring.profiles.active", "local")
-}
-
 jib {
     from {
         image = "eclipse-temurin:21-jre"

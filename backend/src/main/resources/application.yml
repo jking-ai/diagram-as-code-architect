@@ -28,6 +28,7 @@ app:
     api-key: ${API_KEY:dev-local-key-changeme}
     allowed-origins:
       - ${ALLOWED_ORIGIN:http://localhost:5000}
+      - http://localhost:4321
 
 resilience4j:
   circuitbreaker:
