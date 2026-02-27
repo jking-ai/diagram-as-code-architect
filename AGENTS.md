@@ -116,6 +116,10 @@ The function's `DIAGRAM_ARCHITECT_API_KEY` secret must be created in GCP Secret 
 ## Project Documentation
 
 Detailed specs live in `docs/`:
+- [`docs/README.md`](docs/README.md) -- Project overview, capabilities, and quick links
 - [`docs/architecture.md`](docs/architecture.md) -- System architecture and design decisions
 - [`docs/api-contracts.md`](docs/api-contracts.md) -- API endpoint specifications
-- [`docs/milestones.md`](docs/milestones.md) -- Development phases and deliverables
+- [`docs/milestones.md`](docs/milestones.md) -- Development phases and deliverables (22/22 complete)
+- [`docs/production-deployment.md`](docs/production-deployment.md) -- GCP deployment guide
+- [`docs/local-dev-guide.md`](docs/local-dev-guide.md) -- Local development setup
+- [`docs/local-testing-guide.md`](docs/local-testing-guide.md) -- Automated tests, Bruno collection, manual curl testing

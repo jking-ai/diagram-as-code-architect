@@ -3,37 +3,60 @@
 ## High-Level Service Architecture
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'darkMode': true,
+  'background': '#0f1724',
+  'primaryColor': '#1a2538',
+  'primaryTextColor': '#e2e8f0',
+  'primaryBorderColor': '#2a3f5f',
+  'lineColor': '#4a90d9',
+  'secondaryColor': '#1e2d42',
+  'tertiaryColor': '#1e2d42',
+  'edgeLabelBackground': '#1a2538',
+  'clusterBkg': '#1e2d42',
+  'clusterBorder': '#2a3f5f',
+  'nodeTextColor': '#e2e8f0',
+  'titleColor': '#94a3b8'
+}}}%%
 flowchart TB
     subgraph Client
-        A[Browser / Frontend App]
+        A[Browser / Frontend App]:::blue
     end
 
-    subgraph Firebase["Firebase Hosting"]
-        B[Static Frontend - Astro SPA]
-        C[Mermaid.js Renderer]
+    subgraph Firebase["Firebase Platform"]
+        B[Static Frontend - Astro SPA]:::green
+        C[Mermaid.js Renderer]:::green
+        P[apiProxy Cloud Function]:::green
     end
 
     subgraph GCP["Google Cloud Platform"]
         subgraph CloudRun["Cloud Run"]
-            D[Spring Boot Application]
+            D[Spring Boot Application]:::green
             subgraph AppModules["Application Modules"]
-                E[Diagram Generation Service]
-                F[Code Analysis Service]
-                G[Prompt Template Engine]
-                R[ResilientLlmClient - Circuit Breaker]
+                Auth[ApiKeyAuthenticationFilter]:::red
+                E[Diagram Generation Service]:::amber
+                F[Code Analysis Service]:::amber
+                G[Prompt Template Engine]:::amber
+                R[ResilientLlmClient - Circuit Breaker]:::amber
             end
+        end
+
+        subgraph Secrets["Secret Manager"]
+            SK[DIAGRAM_ARCHITECT_API_KEY]:::purple
         end
     end
 
     subgraph External["External Services"]
-        H[Vertex AI Gemini 2.0 Flash]
+        H[Vertex AI Gemini 2.0 Flash]:::purple
     end
 
     A -- "Loads app" --> B
-    A -- "POST /api/v1/diagrams/generate" --> D
-    A -- "GET /api/v1/diagrams/types" --> D
+    A -- "/api/** (same-origin)" --> P
+    P -- "Injects X-API-Key" --> D
+    SK -.-> P
 
-    D --> E
+    D --> Auth
+    Auth --> E
     E --> F
     E --> G
     G -- "Structured prompt + code" --> R
@@ -41,22 +64,45 @@ flowchart TB
     H -- "Mermaid.js syntax" --> R
 
     B -- "Renders Mermaid" --> C
+
+    style Client fill:#1e2d42, stroke:#4a90d9, stroke-width:2px, color:#4a90d9
+    style Firebase fill:#1e2d42, stroke:#34d399, stroke-width:1px, color:#34d399
+    style GCP fill:#141e2e, stroke:#2a3f5f, stroke-width:2px, color:#94a3b8
+    style CloudRun fill:#1e2d42, stroke:#34d399, stroke-width:1px, color:#34d399
+    style AppModules fill:#1a2538, stroke:#2a3f5f, stroke-width:1px, color:#64748b
+    style Secrets fill:#1e2d42, stroke:#a78bfa, stroke-width:1px, color:#a78bfa
+    style External fill:#1e2d42, stroke:#f87171, stroke-width:1px, color:#f87171
+
+    classDef blue   fill:#1a2538, stroke:#4a90d9, stroke-width:2px, color:#e2e8f0;
+    classDef green  fill:#1a2538, stroke:#34d399, stroke-width:2px, color:#e2e8f0;
+    classDef amber  fill:#1a2538, stroke:#f59e0b, stroke-width:2px, color:#e2e8f0;
+    classDef red    fill:#1a2538, stroke:#f87171, stroke-width:2px, color:#e2e8f0;
+    classDef purple fill:#1a2538, stroke:#a78bfa, stroke-width:2px, color:#e2e8f0;
+    classDef slate  fill:#1a2538, stroke:#94a3b8, stroke-width:2px, color:#e2e8f0;
+
+    linkStyle default stroke:#2a3f5f, stroke-width:1px
 ```
 
 ### Flow Summary
 
 There is one primary data flow:
 
-**Diagram Generation Flow:**
+**Diagram Generation Flow (Production):**
 1. User pastes source code into the frontend and selects a diagram type.
-2. The frontend sends the code and diagram type to the `POST /api/v1/diagrams/generate` endpoint.
-3. The Code Analysis Service preprocesses the input, identifying the code language (Java or HCL) and validating it is non-empty.
-4. The Prompt Template Engine selects the appropriate prompt template for the requested diagram type and code language, then assembles the full prompt with the code embedded as context.
-5. The prompt is sent to Vertex AI Gemini 2.0 Flash via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
-6. The LLM response is parsed to extract the Mermaid.js syntax block.
-7. The backend returns the Mermaid syntax and metadata to the frontend.
-8. The frontend renders the Mermaid.js diagram in the browser using the Mermaid.js library.
-9. The user can copy the raw Mermaid syntax, edit it in-place, or export the diagram as PNG or SVG.
+2. The frontend sends a same-origin request to `/api/**`, which Firebase Hosting rewrites to the `apiProxy` Cloud Function.
+3. The Cloud Function injects the `X-API-Key` header (read from GCP Secret Manager) and proxies the request to the Cloud Run backend.
+4. The `ApiKeyAuthenticationFilter` validates the API key before the request reaches the controller.
+5. The Code Analysis Service preprocesses the input, validating the code language and diagram type combination.
+6. The Prompt Template Engine selects the appropriate prompt template and assembles the full prompt with the code embedded as context.
+7. The prompt is sent to Vertex AI Gemini 2.0 Flash via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
+8. The LLM response is parsed to extract the Mermaid.js syntax block.
+9. The backend returns the Mermaid syntax and metadata to the frontend.
+10. The frontend renders the Mermaid.js diagram in the browser using the Mermaid.js library.
+11. The user can copy the raw Mermaid syntax, edit it in-place, or export the diagram as PNG or SVG.
+
+**Diagram Generation Flow (Local Dev):**
+1. Frontend on `:4321` sends requests directly to backend on `:8080` with `X-API-Key: dev-local-key-changeme`.
+2. Steps 4-11 above apply.
 
 ---
 
@@ -159,6 +205,18 @@ There is one primary data flow:
 
 **Trade-off:** Requires CORS configuration on the backend. A simple CORS filter in Spring Boot handles this.
 
+### 8. API Key Authentication with Firebase Function Proxy
+
+**Decision:** Protect the backend API with an `X-API-Key` header validated by a Spring Security filter. Use a Firebase Cloud Function as a reverse proxy that injects the key server-side for production traffic.
+
+**Rationale:**
+- The API key prevents unauthorized access to the Vertex AI-backed endpoints, which incur cost per request.
+- Injecting the key server-side via a Cloud Function means the frontend never stores or transmits the secret -- it makes same-origin calls to `/api/**`, which Firebase Hosting rewrites to the function.
+- The Cloud Function reads the key from GCP Secret Manager (`defineSecret`), so the secret is managed centrally and rotatable without redeploying.
+- For local development, a hardcoded dev key (`dev-local-key-changeme`) in `application-local.yml` avoids the need for Secret Manager access.
+
+**Trade-off:** Adds a network hop (Firebase Function → Cloud Run) to every API request in production, adding ~50-100ms latency. Acceptable because diagram generation itself takes 1-3 seconds, so the overhead is negligible relative to LLM processing time.
+
 ---
 
 ## Project Source Code Structure
@@ -168,17 +226,25 @@ diagram-as-code-architect/
 |-- backend/
 |   |-- build.gradle.kts
 |   |-- settings.gradle.kts
+|   |-- bruno/                                                # Bruno API test collection
+|   |   |-- bruno.json
+|   |   |-- collection.bru
+|   |   |-- diagrams/                                         # Diagram endpoint test requests
+|   |   |-- environments/                                     # Local and production environments
+|   |   |-- health/                                           # Health check test requests
 |   |-- src/
 |   |   |-- main/
 |   |   |   |-- java/com/jkingai/diagramarchitect/
 |   |   |   |   |-- DiagramArchitectApplication.java          # Spring Boot entry point
 |   |   |   |   |-- config/
 |   |   |   |   |   |-- AiConfig.java                         # ChatClient, RetryTemplate, rate-limit detection
-|   |   |   |   |   |-- CorsConfig.java                       # CORS configuration for Firebase frontend
+|   |   |   |   |   |-- SecurityConfig.java                   # Spring Security: CORS + API key filter
 |   |   |   |   |-- controller/
 |   |   |   |   |   |-- DiagramController.java                # REST endpoints for diagram generation
 |   |   |   |   |   |-- GlobalExceptionHandler.java           # @ControllerAdvice for consistent error responses
 |   |   |   |   |   |-- HealthController.java                 # Health check endpoint
+|   |   |   |   |-- security/
+|   |   |   |   |   |-- ApiKeyAuthenticationFilter.java       # Validates X-API-Key header
 |   |   |   |   |-- service/
 |   |   |   |   |   |-- DiagramGenerationService.java         # Orchestrates code analysis and diagram generation
 |   |   |   |   |   |-- CodeAnalysisService.java              # Validates and preprocesses code input
@@ -208,10 +274,11 @@ diagram-as-code-architect/
 |   |   |   |           |-- hcl-infrastructure.txt            # Prompt template for Terraform infrastructure diagrams
 |   |   |   |-- resources/
 |   |   |       |-- application.yml                           # Main config (includes resilience4j circuit breaker)
-|   |   |       |-- application-local.yml                     # Local dev overrides
+|   |   |       |-- application-local.yml                     # Local dev overrides (dev API key)
 |   |   |       |-- application-prod.yml                      # Production (Cloud Run) overrides
 |   |   |-- test/
 |   |       |-- java/com/jkingai/diagramarchitect/
+|   |           |-- DiagramArchitectApplicationTests.java      # Application context loads
 |   |           |-- service/
 |   |           |   |-- DiagramGenerationServiceTest.java
 |   |           |   |-- CodeAnalysisServiceTest.java
@@ -230,14 +297,23 @@ diagram-as-code-architect/
 |   |-- src/
 |   |   |-- pages/
 |   |       |-- index.astro                                   # Single-page app (UI, API calls, Mermaid rendering, export)
+|-- functions/                                                # Firebase Cloud Function (API proxy)
+|   |-- src/
+|   |   |-- index.ts                                          # apiProxy function: injects X-API-Key, proxies to Cloud Run
+|   |-- package.json
+|   |-- tsconfig.json
 |-- demo/
 |   |-- demo.sh                                               # End-to-end demo script (curl + jq)
 |   |-- sample-order-service.java                             # Sample Spring Boot code for demo
 |   |-- sample-infrastructure.tf                              # Sample Terraform code for demo
 |-- docs/
+|   |-- README.md                                             # Project overview and quick links
 |   |-- architecture.md                                       # System architecture and design decisions
 |   |-- api-contracts.md                                      # API endpoint specifications
 |   |-- milestones.md                                         # Development phases and deliverables
-|-- firebase.json                                             # Firebase Hosting configuration
+|   |-- production-deployment.md                              # GCP deployment guide
+|   |-- local-dev-guide.md                                    # Local development setup
+|   |-- local-testing-guide.md                                # Testing guide (automated + manual)
+|-- firebase.json                                             # Firebase Hosting + Functions configuration
 |-- .firebaserc                                               # Firebase project alias
 ```

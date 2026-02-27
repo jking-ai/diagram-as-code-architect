@@ -6,13 +6,29 @@ All request and response bodies use `application/json`.
 
 ---
 
+## Authentication
+
+All endpoints except **health** require the `X-API-Key` header.
+
+| Header | Value | Required |
+|--------|-------|----------|
+| `X-API-Key` | A valid API key | Yes (except `/api/v1/health`) |
+
+**How it works:**
+- The backend validates the `X-API-Key` header via a Spring Security filter (`ApiKeyAuthenticationFilter`).
+- **Local development:** Use the dev key `dev-local-key-changeme` (configured in `application-local.yml`).
+- **Production:** The Firebase Function proxy (`apiProxy`) injects the API key server-side. Frontend calls are same-origin (`/api/**` → Cloud Function → Cloud Run), so the key is never exposed in client code.
+- Requests to protected endpoints without a valid API key receive a `401 UNAUTHORIZED` response.
+
+---
+
 ## Endpoints Overview
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/diagrams/generate` | Generate a Mermaid.js diagram from source code |
-| GET | `/api/v1/diagrams/types` | List all supported diagram types |
-| GET | `/api/v1/health` | Health check |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/v1/diagrams/generate` | `X-API-Key` | Generate a Mermaid.js diagram from source code |
+| GET | `/api/v1/diagrams/types` | `X-API-Key` | List all supported diagram types |
+| GET | `/api/v1/health` | None | Health check |
 
 ---
 
@@ -78,6 +94,7 @@ Accepts source code and a diagram type, analyzes the code using an LLM, and retu
 ```bash
 curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-local-key-changeme" \
   -d '{
     "code": "@RestController\n@RequestMapping(\"/api/v1/orders\")\npublic class OrderController {\n\n    private final OrderService orderService;\n    private final PaymentService paymentService;\n    private final NotificationService notificationService;\n\n    public OrderController(OrderService orderService, PaymentService paymentService, NotificationService notificationService) {\n        this.orderService = orderService;\n        this.paymentService = paymentService;\n        this.notificationService = notificationService;\n    }\n\n    @PostMapping\n    public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {\n        Order order = orderService.create(request);\n        paymentService.processPayment(order);\n        notificationService.sendConfirmation(order);\n        return ResponseEntity.status(HttpStatus.CREATED).body(order);\n    }\n\n    @GetMapping(\"/{id}\")\n    public ResponseEntity<Order> getOrder(@PathVariable UUID id) {\n        return ResponseEntity.ok(orderService.findById(id));\n    }\n}\n\n@Service\npublic class OrderService {\n    private final OrderRepository orderRepository;\n    private final InventoryClient inventoryClient;\n\n    public Order create(CreateOrderRequest request) {\n        inventoryClient.reserveStock(request.getItems());\n        return orderRepository.save(new Order(request));\n    }\n\n    public Order findById(UUID id) {\n        return orderRepository.findById(id).orElseThrow();\n    }\n}\n\n@Service\npublic class PaymentService {\n    private final PaymentGatewayClient paymentGateway;\n\n    public void processPayment(Order order) {\n        paymentGateway.charge(order.getTotal(), order.getPaymentMethod());\n    }\n}\n\n@Service\npublic class NotificationService {\n    private final EmailClient emailClient;\n\n    public void sendConfirmation(Order order) {\n        emailClient.send(order.getCustomerEmail(), \"Order Confirmed\", order.getSummary());\n    }\n}",
     "diagramType": "FLOWCHART",
@@ -105,6 +122,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
 ```bash
 curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-local-key-changeme" \
   -d '{
     "code": "@RestController\n@RequestMapping(\"/api/v1/orders\")\npublic class OrderController {\n\n    private final OrderService orderService;\n    private final PaymentService paymentService;\n    private final NotificationService notificationService;\n\n    @PostMapping\n    public ResponseEntity<Order> createOrder(@RequestBody CreateOrderRequest request) {\n        Order order = orderService.create(request);\n        paymentService.processPayment(order);\n        notificationService.sendConfirmation(order);\n        return ResponseEntity.status(HttpStatus.CREATED).body(order);\n    }\n}\n\n@Service\npublic class OrderService {\n    private final OrderRepository orderRepository;\n    private final InventoryClient inventoryClient;\n\n    public Order create(CreateOrderRequest request) {\n        inventoryClient.reserveStock(request.getItems());\n        return orderRepository.save(new Order(request));\n    }\n}\n\n@Service\npublic class PaymentService {\n    private final PaymentGatewayClient paymentGateway;\n\n    public void processPayment(Order order) {\n        paymentGateway.charge(order.getTotal(), order.getPaymentMethod());\n    }\n}\n\n@Service\npublic class NotificationService {\n    private final EmailClient emailClient;\n\n    public void sendConfirmation(Order order) {\n        emailClient.send(order.getCustomerEmail(), \"Order Confirmed\", order.getSummary());\n    }\n}",
     "diagramType": "SEQUENCE",
@@ -133,6 +151,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
 ```bash
 curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-local-key-changeme" \
   -d '{
     "code": "resource \"google_compute_network\" \"vpc\" {\n  name                    = \"main-vpc\"\n  auto_create_subnetworks = false\n}\n\nresource \"google_compute_subnetwork\" \"private\" {\n  name          = \"private-subnet\"\n  ip_cidr_range = \"10.0.1.0/24\"\n  region        = \"us-central1\"\n  network       = google_compute_network.vpc.id\n}\n\nresource \"google_compute_subnetwork\" \"public\" {\n  name          = \"public-subnet\"\n  ip_cidr_range = \"10.0.2.0/24\"\n  region        = \"us-central1\"\n  network       = google_compute_network.vpc.id\n}\n\nresource \"google_container_cluster\" \"primary\" {\n  name     = \"app-cluster\"\n  location = \"us-central1\"\n  network  = google_compute_network.vpc.id\n  subnetwork = google_compute_subnetwork.private.id\n\n  initial_node_count = 3\n}\n\nresource \"google_sql_database_instance\" \"main\" {\n  name             = \"app-db\"\n  database_version = \"POSTGRES_16\"\n  region           = \"us-central1\"\n\n  settings {\n    tier = \"db-f1-micro\"\n    ip_configuration {\n      ipv4_enabled    = false\n      private_network = google_compute_network.vpc.id\n    }\n  }\n}\n\nresource \"google_compute_global_address\" \"lb\" {\n  name = \"app-lb-ip\"\n}\n\nresource \"google_compute_firewall\" \"allow_internal\" {\n  name    = \"allow-internal\"\n  network = google_compute_network.vpc.id\n\n  allow {\n    protocol = \"tcp\"\n    ports    = [\"0-65535\"]\n  }\n\n  source_ranges = [\"10.0.0.0/16\"]\n}",
     "diagramType": "INFRASTRUCTURE",
@@ -160,6 +179,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
 ```bash
 curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   -H "Content-Type: application/json" \
+  -H "X-API-Key: dev-local-key-changeme" \
   -d '{
     "code": "public interface PaymentProcessor {\n    PaymentResult process(PaymentRequest request);\n}\n\n@Service\npublic class StripePaymentProcessor implements PaymentProcessor {\n    private final StripeClient stripeClient;\n    private final TransactionRepository transactionRepo;\n\n    @Override\n    public PaymentResult process(PaymentRequest request) {\n        ChargeResult charge = stripeClient.charge(request.getAmount());\n        Transaction tx = transactionRepo.save(new Transaction(charge));\n        return new PaymentResult(tx.getId(), charge.getStatus());\n    }\n}\n\npublic record PaymentRequest(BigDecimal amount, String currency, String paymentMethodId) {}\n\npublic record PaymentResult(UUID transactionId, String status) {}\n\n@Entity\npublic class Transaction {\n    @Id @GeneratedValue\n    private UUID id;\n    private BigDecimal amount;\n    private String status;\n    private Instant createdAt;\n}",
     "diagramType": "CLASS",
@@ -179,6 +199,17 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
     "inputCharacters": 892,
     "processingTimeMs": 1750
   }
+}
+```
+
+### Response -- 401 Unauthorized (missing or invalid API key)
+
+```json
+{
+  "error": "UNAUTHORIZED",
+  "message": "Missing or invalid API key",
+  "timestamp": "2026-02-22T14:29:00Z",
+  "path": "/api/v1/diagrams/generate"
 }
 ```
 
@@ -237,7 +268,7 @@ Returns all supported diagram types with their compatible code languages and des
 ### Example Request
 
 ```bash
-curl http://localhost:8080/api/v1/diagrams/types
+curl -H "X-API-Key: dev-local-key-changeme" http://localhost:8080/api/v1/diagrams/types
 ```
 
 ### Response -- 200 OK
@@ -357,6 +388,7 @@ All error responses follow a consistent structure:
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
+| `UNAUTHORIZED` | 401 | Missing or invalid `X-API-Key` header |
 | `VALIDATION_ERROR` | 400 | Request body failed validation (missing or blank required fields) |
 | `UNSUPPORTED_DIAGRAM_TYPE` | 400 | The requested diagram type is not compatible with the given code language |
 | `CODE_TOO_LARGE` | 400 | Code input exceeds the 50,000 character limit |

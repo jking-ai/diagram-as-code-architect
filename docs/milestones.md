@@ -227,9 +227,9 @@ This document defines three development phases with concrete deliverables and ac
 
 ---
 
-## Phase 3: Polish and Demo (In Progress)
+## Phase 3: Polish and Demo ✅
 
-**Goal:** Export functionality, production deployment, and a working demo.
+**Goal:** Export functionality, production deployment, API security, and a working demo.
 
 **Estimated Effort:** 1-2 days
 
@@ -285,29 +285,29 @@ This document defines three development phases with concrete deliverables and ac
 - [x] The frontend is accessible at https://diagram-architect.web.app/.
 - [x] The frontend successfully calls the Cloud Run backend and renders diagrams.
 
-#### 3.5 Unit and Integration Tests
+#### 3.5 Unit and Integration Tests ✅
 
-- [ ] Write unit tests for all services:
+- [x] Write unit tests for all services:
   - `CodeAnalysisServiceTest` -- validation logic.
   - `PromptTemplateEngineTest` -- template selection and placeholder replacement.
   - `MermaidSyntaxExtractorTest` -- extraction from various LLM response formats.
   - `DiagramGenerationServiceTest` -- orchestration with mocked dependencies.
-- [ ] Write controller tests:
+- [x] Write controller tests:
   - `DiagramControllerTest` -- endpoint behavior with mocked `DiagramGenerationService`.
-- [ ] Write one integration test:
+- [x] Write one integration test:
   - `DiagramGenerationIntegrationTest` -- end-to-end with a mocked ChatClient that returns a canned Mermaid response. Verifies the full request/response cycle through the controller.
-- [ ] Add sample test resources:
+- [x] Add sample test resources:
   - `sample-spring-boot-code.java` -- sample Java input.
   - `sample-terraform.tf` -- sample Terraform input.
   - `expected-flowchart.mmd` -- expected Mermaid output for validation.
 
 **Acceptance Criteria:**
-- `./gradlew test` passes with all tests green.
-- Tests do not require external GCP credentials (the ChatClient is mocked).
+- [x] `./gradlew test` passes with all tests green (56 tests across 7 classes).
+- [x] Tests do not require external GCP credentials (the ChatClient is mocked).
 
-#### 3.6 Demo Script and Sample Data
+#### 3.6 Demo Script and Sample Data ✅
 
-- [ ] Create a `demo/` directory in the project root with:
+- [x] Create a `demo/` directory in the project root with:
   - `sample-order-service.java` -- a multi-class Spring Boot code sample (the OrderController example from api-contracts.md).
   - `sample-infrastructure.tf` -- a Terraform configuration sample (the VPC/GKE example from api-contracts.md).
   - `demo.sh` -- a shell script that:
@@ -317,12 +317,38 @@ This document defines three development phases with concrete deliverables and ac
     4. Generates a class diagram from the Java sample.
     5. Generates an infrastructure diagram from the Terraform sample.
     6. Prints each Mermaid output with a header.
-- [ ] The demo script should use `curl` and `jq` for readable output.
+- [x] The demo script uses `curl` and `jq` for readable output.
 
 **Acceptance Criteria:**
-- Running `./demo/demo.sh` against a running backend instance completes without errors.
-- Each request returns valid Mermaid syntax.
-- The demo takes under 1 minute to run end-to-end.
+- [x] Running `./demo/demo.sh` against a running backend instance completes without errors.
+- [x] Each request returns valid Mermaid syntax.
+- [x] The demo takes under 1 minute to run end-to-end.
+
+#### 3.7 API Key Authentication ✅
+
+- [x] Implement `ApiKeyAuthenticationFilter` in Spring Security filter chain.
+- [x] Validate `X-API-Key` header against configured API key.
+- [x] Configure `SecurityConfig.java` with CORS + API key filter integration.
+- [x] Health and actuator endpoints remain public (no auth required).
+- [x] API key sourced from `application-local.yml` (dev key) and `API_KEY` env var (production via GCP Secret Manager).
+
+**Acceptance Criteria:**
+- [x] Requests without `X-API-Key` header to protected endpoints return 401 `UNAUTHORIZED`.
+- [x] Requests with valid `X-API-Key` header proceed normally.
+- [x] Health check endpoint works without authentication.
+
+#### 3.8 Firebase Function Proxy ✅
+
+- [x] Create Firebase Cloud Function (`apiProxy`) in `functions/src/index.ts`.
+- [x] Function reads API key from GCP Secret Manager via `defineSecret('DIAGRAM_ARCHITECT_API_KEY')`.
+- [x] Function injects `X-API-Key` header into proxied requests to Cloud Run backend.
+- [x] Configure `firebase.json` to rewrite `/api/**` requests to the `apiProxy` function.
+- [x] Frontend makes same-origin API calls; the proxy transparently adds authentication.
+
+**Acceptance Criteria:**
+- [x] Frontend at `diagram-architect.web.app` can generate diagrams without exposing the API key.
+- [x] Direct Cloud Run access without API key returns 401.
+- [x] `firebase deploy --only functions` deploys the proxy successfully.
 
 ---
 
@@ -375,8 +401,12 @@ flowchart LR
         D4[3.4 Firebase Hosting Deploy]
         D5[3.5 Tests]
         D6[3.6 Demo Script]
+        D7[3.7 API Key Auth]
+        D8[3.8 Firebase Function Proxy]
         D2 --> D3
         D3 --> D4
+        D7 --> D8
+        D4 --> D8
         D1
         D5
         D6
@@ -391,5 +421,5 @@ flowchart LR
 |-------|-------------|------------|--------|
 | Phase 1: Foundation | Backend scaffolding, enums/DTOs, health check, CORS config, frontend skeleton | None | ✅ Complete |
 | Phase 2: Core Features | Prompt templates, template engine, code analysis, Mermaid extractor, generation service, controller, error handling, frontend integration | Phase 1 | ✅ Complete |
-| Phase 3: Polish and Demo | Export functionality, container image, Cloud Run deploy, Firebase Hosting deploy, tests, demo script | Phase 2 | 4/6 complete (tests + demo remaining) |
-| **Total** | **18/20 deliverables complete** | | |
+| Phase 3: Polish and Demo | Export functionality, container image, Cloud Run deploy, Firebase Hosting deploy, tests, demo script, API key auth, Firebase Function proxy | Phase 2 | ✅ Complete |
+| **Total** | **22/22 deliverables complete** | | |
