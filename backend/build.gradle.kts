@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.jkingai"
-version = "0.1.0"
+version = "0.2.2"
 
 java {
     toolchain {
