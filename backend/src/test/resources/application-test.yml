@@ -1,0 +1,5 @@
+app:
+  security:
+    api-key: test-api-key
+    allowed-origins:
+      - "*"

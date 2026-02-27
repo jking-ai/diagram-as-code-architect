@@ -266,10 +266,10 @@
         }
       });
 
-      // API base URL - update for production
-      const API_BASE = window.location.hostname === 'localhost'
-        ? 'http://localhost:8080'
-        : 'https://diagram-architect-api-vgsrokkhba-uc.a.run.app';
+      // In production, calls go through Firebase Function proxy (same origin)
+      // In local dev, calls go directly to the backend with the dev API key
+      const IS_LOCAL = window.location.hostname === 'localhost';
+      const API_BASE = IS_LOCAL ? 'http://localhost:8080' : '';
 
       // DOM elements
       const codeInput = document.getElementById('codeInput');
@@ -316,9 +316,14 @@
         generateBtn.disabled = true;
 
         try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (IS_LOCAL) {
+            headers['X-API-Key'] = 'dev-local-key-changeme';
+          }
+
           const response = await fetch(`${API_BASE}/api/v1/diagrams/generate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
               code: code,
               diagramType: diagramType.value,

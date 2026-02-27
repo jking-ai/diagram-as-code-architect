@@ -24,9 +24,11 @@ spring:
               temperature: 0.2
 
 app:
-  cors:
+  security:
+    api-key: ${API_KEY:dev-local-key-changeme}
     allowed-origins:
-      - http://localhost:5000
+      - ${ALLOWED_ORIGIN:http://localhost:5000}
+      - http://localhost:4321
 
 resilience4j:
   circuitbreaker:

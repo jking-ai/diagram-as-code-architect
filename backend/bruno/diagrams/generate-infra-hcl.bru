@@ -1,0 +1,29 @@
+meta {
+  name: Generate Infrastructure (HCL)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{host}}/api/v1/diagrams/generate
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "code": "resource \"google_compute_network\" \"vpc\" {\n  name = \"main-vpc\"\n  auto_create_subnetworks = false\n}\n\nresource \"google_container_cluster\" \"primary\" {\n  name = \"app-cluster\"\n  network = google_compute_network.vpc.id\n}",
+    "diagramType": "INFRASTRUCTURE",
+    "codeLanguage": "HCL"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.diagramType: eq INFRASTRUCTURE
+  res.body.codeLanguage: eq HCL
+}

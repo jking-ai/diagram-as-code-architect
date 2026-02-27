@@ -15,6 +15,14 @@ gcp-credentials.json
 # Firebase
 .firebase/
 
+# Firebase Functions
+functions/.env
+functions/lib/
+functions/node_modules/
+
+# Bruno production environment (contains real API key)
+**/bruno/environments/production.bru
+
 # OS
 .DS_Store
 node_modules/
