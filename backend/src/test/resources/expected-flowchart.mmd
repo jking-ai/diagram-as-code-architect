@@ -1,0 +1,28 @@
+flowchart TB
+    subgraph API["API Layer"]
+        OC[OrderController]
+    end
+
+    subgraph Services["Service Layer"]
+        OS[OrderService]
+        PS[PaymentService]
+        NS[NotificationService]
+    end
+
+    subgraph Persistence["Persistence Layer"]
+        OR[OrderRepository]
+    end
+
+    subgraph External["External Clients"]
+        IC[InventoryClient]
+        PG[PaymentGatewayClient]
+        EC[EmailClient]
+    end
+
+    OC --> OS
+    OC --> PS
+    OC --> NS
+    OS --> OR
+    OS --> IC
+    PS --> PG
+    NS --> EC
