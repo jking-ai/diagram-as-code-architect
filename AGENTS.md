@@ -59,6 +59,7 @@ Open the `backend/bruno/` collection in Bruno. Select the `local` environment fo
 
 ### Key Design Decisions
 - **API Key authentication:** Spring Security filter (`ApiKeyAuthenticationFilter`) validates `X-API-Key` header. The key is injected server-side by the Firebase Function proxy -- never exposed in frontend code.
+- **Per-IP rate limiting:** `RateLimitFilter` (Bucket4j-backed, in-memory) sits in front of the API key filter so unauthenticated traffic is throttled before auth runs. Two buckets per client IP keyed by `X-Forwarded-For` (Cloud Run sets it; falls back to `request.getRemoteAddr()`): a general bucket (default 10 burst / 60 per minute) for all endpoints and a stricter "generate" bucket (default 5 burst / 30 per minute) for `POST /api/v1/diagrams/generate`. Health and actuator endpoints are skipped. Limit hits return `429` with JSON `{"error": "RATE_LIMIT_EXCEEDED", "message": ..., "retryAfterSeconds": 60}` and a `Retry-After` header. Configurable via `app.rate-limit.*` in `application.yml`.
 - **Prompt templates** are plain text files at `backend/src/main/resources/prompt/templates/`, keyed by `{language}-{diagramType}.txt` (e.g., `java-flowchart.txt`). Cached in `ConcurrentHashMap` on first load.
 - **Mermaid.js loaded from CDN** in the Astro page, not from npm. Script tags require `is:inline` attribute for Astro to preserve them.
 - **Container images built with Jib** (Gradle plugin) -- no Dockerfile exists. Base image: `eclipse-temurin:21-jre`.
@@ -89,7 +90,8 @@ All endpoints except health and actuator require the `X-API-Key` header.
 | `UnsupportedDiagramTypeException` | 400 | `UNSUPPORTED_DIAGRAM_TYPE` |
 | `IllegalArgumentException` (code too large) | 400 | `CODE_TOO_LARGE` |
 | `MethodArgumentNotValidException` | 400 | `VALIDATION_ERROR` |
-| `LlmRateLimitException` | 429 | `RATE_LIMITED` (with `Retry-After` header) |
+| Per-IP rate limit exceeded | 429 | `RATE_LIMIT_EXCEEDED` (with `Retry-After` header) |
+| `LlmRateLimitException` (upstream Vertex AI 429) | 429 | `RATE_LIMITED` (with `Retry-After` header) |
 | `DiagramGenerationException` (with cause) | 502 | `LLM_ERROR` |
 | `LlmServiceUnavailableException` | 503 | `SERVICE_UNAVAILABLE` (with `Retry-After` header) |
 

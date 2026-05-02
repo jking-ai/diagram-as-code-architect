@@ -24,7 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "app.security.api-key=test-api-key",
-        "app.security.allowed-origins=*"
+        "app.security.allowed-origins=*",
+        "app.rate-limit.enabled=false"
 })
 class DiagramGenerationIntegrationTest {
 

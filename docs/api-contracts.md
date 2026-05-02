@@ -395,6 +395,7 @@ All error responses follow a consistent structure:
 | `INVALID_CODE_LANGUAGE` | 400 | The code language value is not one of the supported enums |
 | `INVALID_DIAGRAM_TYPE` | 400 | The diagram type value is not one of the supported enums |
 | `GENERATION_FAILED` | 500 | Diagram generation failed during processing |
+| `RATE_LIMIT_EXCEEDED` | 429 | Per-IP rate limit exceeded (Bucket4j, in-memory). Body contains `retryAfterSeconds`; response also includes `Retry-After` header. Defaults: 10/min burst general, 5/min burst on `/api/v1/diagrams/generate`. |
 | `RATE_LIMITED` | 429 | Vertex AI rate limit exceeded (gRPC `RESOURCE_EXHAUSTED`). Response includes `Retry-After` header (seconds). |
 | `LLM_ERROR` | 502 | The upstream Vertex AI Gemini service returned an error or timed out |
 | `SERVICE_UNAVAILABLE` | 503 | Circuit breaker is open due to repeated LLM failures; requests are failing fast. Response includes `Retry-After` header (seconds). |

@@ -30,6 +30,14 @@ app:
     allowed-origins:
       - ${ALLOWED_ORIGIN:http://localhost:5000}
       - http://localhost:4321
+  rate-limit:
+    enabled: true
+    # General per-IP limit applied to every authenticated endpoint.
+    requests-per-minute: 60
+    burst-capacity: 10
+    # Stricter per-IP limit for the LLM-backed generate endpoint.
+    generate-requests-per-minute: 30
+    generate-burst-capacity: 5
 
 resilience4j:
   circuitbreaker:

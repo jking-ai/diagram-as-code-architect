@@ -33,6 +33,7 @@ flowchart TB
         subgraph CloudRun["Cloud Run"]
             D[Spring Boot Application]:::green
             subgraph AppModules["Application Modules"]
+                RL[RateLimitFilter - Bucket4j per-IP]:::red
                 Auth[ApiKeyAuthenticationFilter]:::red
                 E[Diagram Generation Service]:::amber
                 F[Code Analysis Service]:::amber
@@ -55,7 +56,8 @@ flowchart TB
     P -- "Injects X-API-Key" --> D
     SK -.-> P
 
-    D --> Auth
+    D --> RL
+    RL --> Auth
     Auth --> E
     E --> F
     E --> G
@@ -91,7 +93,7 @@ There is one primary data flow:
 1. User pastes source code into the frontend and selects a diagram type.
 2. The frontend sends a same-origin request to `/api/**`, which Firebase Hosting rewrites to the `apiProxy` Cloud Function.
 3. The Cloud Function injects the `X-API-Key` header (read from GCP Secret Manager) and proxies the request to the Cloud Run backend.
-4. The `ApiKeyAuthenticationFilter` validates the API key before the request reaches the controller.
+4. The `RateLimitFilter` (Bucket4j, per-IP) throttles the request first; if the bucket is exhausted it short-circuits with `429 RATE_LIMIT_EXCEEDED` before any auth or downstream work runs. The `ApiKeyAuthenticationFilter` then validates the API key.
 5. The Code Analysis Service preprocesses the input, validating the code language and diagram type combination.
 6. The Prompt Template Engine selects the appropriate prompt template and assembles the full prompt with the code embedded as context.
 7. The prompt is sent to Vertex AI Gemini 3.1 Flash-Lite via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
@@ -217,6 +219,19 @@ There is one primary data flow:
 
 **Trade-off:** Adds a network hop (Firebase Function → Cloud Run) to every API request in production, adding ~50-100ms latency. Acceptable because diagram generation itself takes 1-3 seconds, so the overhead is negligible relative to LLM processing time.
 
+### 9. Per-IP Rate Limiting with Bucket4j
+
+**Decision:** Throttle requests per client IP using an in-memory Bucket4j-backed `RateLimitFilter`, ordered before the API key filter in the Spring Security chain.
+
+**Rationale:**
+- Cloud Run is configured with `allUsers` invoker, so without app-level throttling a single noisy client can saturate the Vertex AI quota for everyone.
+- Two buckets per IP: a general bucket (default 10 burst / 60 per minute) for all endpoints and a stricter "generate" bucket (default 5 burst / 30 per minute) for `POST /api/v1/diagrams/generate`, which is the LLM-backed cost driver.
+- IP is resolved from `X-Forwarded-For` (Cloud Run sets it) with `request.getRemoteAddr()` as fallback.
+- The filter runs *before* `ApiKeyAuthenticationFilter` so unauthenticated traffic is throttled too — attackers can't burn cheap auth checks.
+- Limits are tunable via `app.rate-limit.*` in `application.yml`; setting `app.rate-limit.enabled=false` disables the filter entirely (useful for tests).
+
+**Trade-off:** State is in-memory per Cloud Run instance, so limits are not shared across container replicas. Acceptable for current traffic; a Redis-backed bucket store would be the next step if horizontal scaling makes per-instance limits ineffective.
+
 ---
 
 ## Project Source Code Structure
@@ -238,13 +253,15 @@ diagram-as-code-architect/
 |   |   |   |   |-- DiagramArchitectApplication.java          # Spring Boot entry point
 |   |   |   |   |-- config/
 |   |   |   |   |   |-- AiConfig.java                         # ChatClient, RetryTemplate, rate-limit detection
-|   |   |   |   |   |-- SecurityConfig.java                   # Spring Security: CORS + API key filter
+|   |   |   |   |   |-- ApiKeyAuthenticationFilter.java       # Validates X-API-Key header
+|   |   |   |   |   |-- ApiSecurityProperties.java            # `app.security.*` config binding
+|   |   |   |   |   |-- RateLimitFilter.java                  # Bucket4j per-IP throttling (general + generate buckets)
+|   |   |   |   |   |-- RateLimitProperties.java              # `app.rate-limit.*` config binding
+|   |   |   |   |   |-- SecurityConfig.java                   # Spring Security: CORS + rate-limit + API key filter
 |   |   |   |   |-- controller/
 |   |   |   |   |   |-- DiagramController.java                # REST endpoints for diagram generation
 |   |   |   |   |   |-- GlobalExceptionHandler.java           # @ControllerAdvice for consistent error responses
 |   |   |   |   |   |-- HealthController.java                 # Health check endpoint
-|   |   |   |   |-- security/
-|   |   |   |   |   |-- ApiKeyAuthenticationFilter.java       # Validates X-API-Key header
 |   |   |   |   |-- service/
 |   |   |   |   |   |-- DiagramGenerationService.java         # Orchestrates code analysis and diagram generation
 |   |   |   |   |   |-- CodeAnalysisService.java              # Validates and preprocesses code input

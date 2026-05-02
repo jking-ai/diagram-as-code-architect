@@ -24,14 +24,18 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(ApiSecurityProperties.class)
+@EnableConfigurationProperties({ApiSecurityProperties.class, RateLimitProperties.class})
 public class SecurityConfig {
 
     private final ApiSecurityProperties securityProperties;
+    private final RateLimitProperties rateLimitProperties;
     private final ObjectMapper objectMapper;
 
-    public SecurityConfig(ApiSecurityProperties securityProperties, ObjectMapper objectMapper) {
+    public SecurityConfig(ApiSecurityProperties securityProperties,
+                          RateLimitProperties rateLimitProperties,
+                          ObjectMapper objectMapper) {
         this.securityProperties = securityProperties;
+        this.rateLimitProperties = rateLimitProperties;
         this.objectMapper = objectMapper;
     }
 
@@ -47,9 +51,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                // Rate limit BEFORE auth so unauthenticated traffic can't burn API key checks.
                 .addFilterBefore(
-                        new ApiKeyAuthenticationFilter(securityProperties.apiKey()),
+                        new RateLimitFilter(rateLimitProperties, objectMapper),
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        new ApiKeyAuthenticationFilter(securityProperties.apiKey()),
+                        RateLimitFilter.class
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(unauthorizedEntryPoint())
