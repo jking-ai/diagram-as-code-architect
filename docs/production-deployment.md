@@ -197,11 +197,13 @@ gcloud run deploy diagram-architect-api \
   --memory=512Mi \
   --cpu=1 \
   --min-instances=0 \
-  --max-instances=2 \
+  --max-instances=1 \
   --timeout=300 \
   --allow-unauthenticated \
   --project=<PROJECT_ID>
 ```
+
+> **Note on `--max-instances=1`.** The Bucket4j rate limiter holds bucket state in memory, so multiple Cloud Run instances would each maintain their own per-IP counter and an attacker could effectively multiply the limit by the instance count. Pinning to one instance keeps the limit consistent. It also caps compute spend. If real traffic outgrows a single instance, swap Bucket4j to a Redis-backed bucket store and raise the cap.
 
 ### Quick Redeploy (code changes only)
 
