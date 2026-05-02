@@ -18,6 +18,7 @@ spring:
         gemini:
           project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
           location: ${GEMINI_LOCATION:global}
+          api-endpoint: ${GEMINI_API_ENDPOINT:aiplatform.googleapis.com}
           chat:
             options:
               model: gemini-3.1-flash-lite-preview
