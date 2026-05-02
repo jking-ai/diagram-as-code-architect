@@ -17,7 +17,7 @@ spring:
       ai:
         gemini:
           project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
-          location: ${VERTEX_AI_LOCATION:us-central1}
+          location: ${GEMINI_LOCATION:global}
           chat:
             options:
               model: gemini-3.1-flash-lite-preview
