@@ -6,7 +6,7 @@
     "rewrites": [
       {
         "source": "/api/**",
-        "function": "apiProxy"
+        "function": "diagramArchitectApi"
       },
       {
         "source": "**",

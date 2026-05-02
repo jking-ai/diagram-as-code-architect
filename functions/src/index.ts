@@ -42,7 +42,7 @@ function getApp(): express.Express {
   return app;
 }
 
-export const apiProxy = onRequest(
+export const diagramArchitectApi = onRequest(
   {
     region: 'us-central1',
     secrets: [apiKey],
