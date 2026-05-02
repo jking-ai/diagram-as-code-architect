@@ -47,7 +47,7 @@ flowchart TB
     end
 
     subgraph External["External Services"]
-        H[Vertex AI Gemini 2.0 Flash]:::purple
+        H[Vertex AI Gemini 3.1 Flash-Lite]:::purple
     end
 
     A -- "Loads app" --> B
@@ -94,7 +94,7 @@ There is one primary data flow:
 4. The `ApiKeyAuthenticationFilter` validates the API key before the request reaches the controller.
 5. The Code Analysis Service preprocesses the input, validating the code language and diagram type combination.
 6. The Prompt Template Engine selects the appropriate prompt template and assembles the full prompt with the code embedded as context.
-7. The prompt is sent to Vertex AI Gemini 2.0 Flash via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
+7. The prompt is sent to Vertex AI Gemini 3.1 Flash-Lite via `ResilientLlmClient`, which wraps Spring AI's `ChatClient` with a Resilience4j circuit breaker and retry logic.
 8. The LLM response is parsed to extract the Mermaid.js syntax block.
 9. The backend returns the Mermaid syntax and metadata to the frontend.
 10. The frontend renders the Mermaid.js diagram in the browser using the Mermaid.js library.
@@ -114,7 +114,7 @@ There is one primary data flow:
 | Framework | Spring Boot | 3.5.11 | Stable release compatible with Spring AI 1.1.x; mature ecosystem |
 | AI Framework | Spring AI | 1.1.2 (`spring-ai-starter-model-vertex-ai-gemini`) | GA release with built-in Vertex AI Gemini ChatClient and structured output support |
 | Build Tool | Gradle (Kotlin DSL) | 8.x | Convention-over-configuration, strong Spring Boot plugin support |
-| Chat Model | Vertex AI Gemini 2.0 Flash | -- | Fast, cost-effective generative model with strong code understanding; ideal for structured output tasks |
+| Chat Model | Vertex AI Gemini 3.1 Flash-Lite | preview | Fast, cost-effective generative model with strong code understanding; ideal for structured output tasks |
 | Resilience | Resilience4j | 2.2.0 | Circuit breaker and retry for LLM calls; prevents cascading failures from rate limits |
 | Frontend Framework | Astro | 5.17.1 | Lightweight static-site generator; single-page app with inline scripts and CDN-loaded Mermaid.js |
 | Diagram Rendering | Mermaid.js | 11.6.0 (CDN) | Industry-standard diagram-as-code library; renders directly in the browser |
@@ -126,16 +126,16 @@ There is one primary data flow:
 
 ## Key Design Decisions and Trade-offs
 
-### 1. Gemini 2.0 Flash vs. Gemini 2.0 Pro for Code Analysis
+### 1. Gemini 3.1 Flash-Lite vs. Gemini 3.1 Pro for Code Analysis
 
-**Decision:** Use Gemini 2.0 Flash.
+**Decision:** Use Gemini 3.1 Flash-Lite (preview).
 
 **Rationale:**
-- Gemini 2.0 Flash offers strong code understanding at significantly lower latency and cost than Pro.
-- Diagram generation from code is a structured extraction task, not a deep reasoning task, making Flash's capabilities sufficient.
+- Flash-Lite offers strong code understanding at significantly lower latency and cost than Pro.
+- Diagram generation from code is a structured extraction task, not a deep reasoning task, making Flash-Lite's capabilities sufficient.
 - The lower latency provides a better user experience for an interactive tool.
 
-**Trade-off:** For extremely large or complex codebases, Pro might produce slightly better structural analysis. The input size limit and prompt design mitigate this.
+**Trade-off:** For extremely large or complex codebases, Pro might produce slightly better structural analysis. The input size limit and prompt design mitigate this. Flash-Lite is a preview model — pin a stable release once one is GA.
 
 ### 2. Retry and Circuit Breaker for LLM Calls
 

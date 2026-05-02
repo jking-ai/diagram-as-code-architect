@@ -48,7 +48,7 @@ class DiagramControllerTest {
                 "flowchart TB\n    A --> B",
                 DiagramType.FLOWCHART,
                 CodeLanguage.JAVA,
-                Map.of("model", "gemini-2.0-flash", "inputCharacters", 20, "processingTimeMs", 1500L));
+                Map.of("model", "gemini-3.1-flash-lite-preview", "inputCharacters", 20, "processingTimeMs", 1500L));
 
         when(generationService.generate(any())).thenReturn(response);
 
@@ -62,7 +62,7 @@ class DiagramControllerTest {
                 .andExpect(jsonPath("$.mermaidSyntax").value("flowchart TB\n    A --> B"))
                 .andExpect(jsonPath("$.diagramType").value("FLOWCHART"))
                 .andExpect(jsonPath("$.codeLanguage").value("JAVA"))
-                .andExpect(jsonPath("$.metadata.model").value("gemini-2.0-flash"));
+                .andExpect(jsonPath("$.metadata.model").value("gemini-3.1-flash-lite-preview"));
     }
 
     @Test

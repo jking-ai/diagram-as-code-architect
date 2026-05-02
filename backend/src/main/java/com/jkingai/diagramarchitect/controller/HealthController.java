@@ -12,7 +12,7 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 public class HealthController {
 
-    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:gemini-2.0-flash}")
+    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:gemini-3.1-flash-lite-preview}")
     private String modelName;
 
     @GetMapping("/health")

@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project Overview
 
-Diagram-as-Code Architect converts Spring Boot (Java) or Terraform (HCL) source code into Mermaid.js diagrams using Vertex AI Gemini 2.0 Flash via Spring AI. Stateless architecture: no database.
+Diagram-as-Code Architect converts Spring Boot (Java) or Terraform (HCL) source code into Mermaid.js diagrams using Vertex AI Gemini 3.1 Flash-Lite via Spring AI. Stateless architecture: no database.
 
 - **Backend:** Spring Boot 3.5.11 + Spring AI 1.1.2 (Java 21) on Cloud Run
 - **Frontend:** Astro 5.17.1 single-page app with Mermaid.js 11.6.0 (CDN) on Firebase Hosting

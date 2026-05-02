@@ -87,7 +87,7 @@ Expected:
     "chatModel": {
       "status": "UP",
       "details": {
-        "model": "gemini-2.0-flash",
+        "model": "gemini-3.1-flash-lite-preview",
         "provider": "vertexai"
       }
     }

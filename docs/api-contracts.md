@@ -110,7 +110,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "FLOWCHART",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.0-flash",
+    "model": "gemini-3.1-flash-lite-preview",
     "inputCharacters": 1847,
     "processingTimeMs": 2130
   }
@@ -139,7 +139,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "SEQUENCE",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.0-flash",
+    "model": "gemini-3.1-flash-lite-preview",
     "inputCharacters": 1420,
     "processingTimeMs": 2450
   }
@@ -167,7 +167,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "INFRASTRUCTURE",
   "codeLanguage": "HCL",
   "metadata": {
-    "model": "gemini-2.0-flash",
+    "model": "gemini-3.1-flash-lite-preview",
     "inputCharacters": 1135,
     "processingTimeMs": 1980
   }
@@ -195,7 +195,7 @@ curl -X POST http://localhost:8080/api/v1/diagrams/generate \
   "diagramType": "CLASS",
   "codeLanguage": "JAVA",
   "metadata": {
-    "model": "gemini-2.0-flash",
+    "model": "gemini-3.1-flash-lite-preview",
     "inputCharacters": 892,
     "processingTimeMs": 1750
   }
@@ -338,7 +338,7 @@ curl http://localhost:8080/api/v1/health
     "chatModel": {
       "status": "UP",
       "details": {
-        "model": "gemini-2.0-flash",
+        "model": "gemini-3.1-flash-lite-preview",
         "provider": "vertexai"
       }
     }

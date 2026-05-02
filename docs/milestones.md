@@ -26,7 +26,7 @@ This document defines three development phases with concrete deliverables and ac
 - [x] In `application.yml`, configure Spring AI Vertex AI properties:
   - `spring.ai.vertex.ai.gemini.project-id` (from environment variable)
   - `spring.ai.vertex.ai.gemini.location` (default: `us-central1`)
-  - `spring.ai.vertex.ai.gemini.chat.options.model` (default: `gemini-2.0-flash`)
+  - `spring.ai.vertex.ai.gemini.chat.options.model` (default: `gemini-3.1-flash-lite-preview`)
   - `spring.ai.vertex.ai.gemini.chat.options.temperature` (default: `0.2` for deterministic structured output)
 
 **Acceptance Criteria:**

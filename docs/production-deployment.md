@@ -47,7 +47,7 @@ flowchart TB
         end
 
         subgraph VertexAI["Vertex AI"]
-            Chat[Gemini 2.0 Flash]:::red
+            Chat[Gemini 3.1 Flash-Lite]:::red
         end
     end
 
@@ -263,7 +263,7 @@ Expected:
     "chatModel": {
       "status": "UP",
       "details": {
-        "model": "gemini-2.0-flash",
+        "model": "gemini-3.1-flash-lite-preview",
         "provider": "vertexai"
       }
     }

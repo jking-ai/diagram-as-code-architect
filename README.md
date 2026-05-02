@@ -13,7 +13,7 @@
 | Component | Technology |
 |-----------|-----------|
 | Backend | Spring Boot 3.5.11 + Spring AI 1.1.2 (Java 21) |
-| LLM | Vertex AI Gemini 2.0 Flash |
+| LLM | Vertex AI Gemini 3.1 Flash-Lite |
 | Resilience | Resilience4j 2.2.0 (circuit breaker + retry) |
 | Frontend | Astro 5.17.1 + Mermaid.js 11.6.0 (CDN) |
 | Deployment | Cloud Run (backend) + Firebase Hosting (frontend) |

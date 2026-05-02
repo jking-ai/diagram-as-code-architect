@@ -34,7 +34,7 @@ class DiagramGenerationServiceTest {
                 codeAnalysisService, promptTemplateEngine, mermaidSyntaxExtractor, resilientLlmClient);
         Field modelField = DiagramGenerationService.class.getDeclaredField("modelName");
         modelField.setAccessible(true);
-        modelField.set(service, "gemini-2.0-flash");
+        modelField.set(service, "gemini-3.1-flash-lite-preview");
     }
 
     @Test

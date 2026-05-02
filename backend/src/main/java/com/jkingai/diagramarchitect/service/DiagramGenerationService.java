@@ -22,7 +22,7 @@ public class DiagramGenerationService {
     private final MermaidSyntaxExtractor mermaidSyntaxExtractor;
     private final ResilientLlmClient resilientLlmClient;
 
-    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:gemini-2.0-flash}")
+    @Value("${spring.ai.vertex.ai.gemini.chat.options.model:gemini-3.1-flash-lite-preview}")
     private String modelName;
 
     public DiagramGenerationService(CodeAnalysisService codeAnalysisService,

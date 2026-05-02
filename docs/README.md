@@ -48,7 +48,7 @@ Diagram-as-Code Architect solves this by accepting source code (Spring Boot Java
 | Backend Runtime | Java | 21 (LTS) |
 | Backend Framework | Spring Boot | 3.5.11 |
 | AI Framework | Spring AI (Vertex AI Gemini) | 1.1.2 |
-| Chat Model | Vertex AI Gemini 2.0 Flash | -- |
+| Chat Model | Vertex AI Gemini 3.1 Flash-Lite | preview |
 | Resilience | Resilience4j | 2.2.0 |
 | Frontend | Astro + Mermaid.js (CDN) | 5.17.1 / 11.6.0 |
 | API Proxy | Firebase Cloud Functions (Node.js) | v2 |
