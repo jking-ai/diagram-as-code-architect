@@ -1,0 +1,11 @@
+app:
+  security:
+    api-key: ${API_KEY}
+    allowed-origins:
+      - https://diagram-architect.web.app
+      - https://diagram-architect.firebaseapp.com
+
+logging:
+  level:
+    com.jkingai.diagramarchitect: INFO
+    org.springframework.ai: WARN

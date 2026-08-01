@@ -177,7 +177,7 @@ This document defines three development phases with concrete deliverables and ac
 **Acceptance Criteria:**
 - [x] Submitting code with `FLOWCHART`/`JAVA` returns a `DiagramResponse` containing valid Mermaid syntax starting with `flowchart`.
 - [x] The `metadata.processingTimeMs` field reflects actual elapsed time.
-- [x] The `metadata.model` field is `gemini-2.0-flash`.
+- [x] The `metadata.model` field is `gemini-3.1-flash-lite-preview`.
 
 #### 2.6 Diagram Controller ✅
 
