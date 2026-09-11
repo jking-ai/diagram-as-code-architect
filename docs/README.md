@@ -2,7 +2,7 @@
 
 **Automated documentation tool that converts Spring Boot source code or Terraform files into Mermaid.js diagrams using LLM-powered code analysis.**
 
-**Live Demo:** https://diagram-architect.web.app/
+**Live Demo:** https://diagram-architect.jking.ai/
 
 ---
 
