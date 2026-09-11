@@ -28,7 +28,7 @@ flowchart TB
     end
 
     subgraph Firebase["Firebase Platform"]
-        FH[Firebase Hosting<br/>diagram-architect.web.app]:::green
+        FH[Firebase Hosting<br/>diagram-architect.jking.ai]:::green
         CF[apiProxy Cloud Function<br/>256 MiB · us-central1]:::green
     end
 
@@ -98,7 +98,7 @@ flowchart TB
 | **Project** | `<PROJECT_ID>` | |
 | **Region** | `us-central1` | All resources colocated |
 | **Cloud Run service** | `diagram-architect-api` | 512 Mi, 1 vCPU, 0-2 instances, scale-to-zero |
-| **Firebase Hosting site** | `diagram-architect` | CDN-backed, `diagram-architect.web.app` |
+| **Firebase Hosting site** | `diagram-architect` | CDN-backed, `diagram-architect.jking.ai` (custom domain) and `diagram-architect.web.app` |
 | **Cloud Function** | `apiProxy` | 256 MiB, us-central1, 120s timeout |
 | **Artifact Registry** | `docker-repo` | Docker format, `us-central1` |
 | **Service account** | Cloud Run default SA | `Vertex AI User` role |
@@ -282,7 +282,7 @@ curl -s -H "X-API-Key: <key>" \
 
 ### Generate a Diagram via Frontend
 
-1. Open https://diagram-architect.web.app/
+1. Open https://diagram-architect.jking.ai/
 2. Paste Java or Terraform code
 3. Select a diagram type and click "Generate"
 4. Verify the Mermaid diagram renders in the output area
@@ -308,7 +308,7 @@ gcloud run services logs tail diagram-architect-api --region=us-central1
 | 502 from Cloud Function | Cloud Run service not running or wrong `API_TARGET` | Check Cloud Run logs; verify `functions/.env` has correct target URL |
 | Cold start takes 15-20s | Spring Boot JVM startup on Cloud Run with `min-instances=0` | Set `--min-instances=1` for ~$15-25/mo to keep warm |
 | LLM_ERROR on generate | Vertex AI Gemini service issue or rate limit | Check Cloud Run logs for gRPC error details; retry after backoff |
-| CORS errors in browser | Allowed origins mismatch in `application-prod.yml` | Verify `cors.allowed-origins` includes `https://diagram-architect.web.app` |
+| CORS errors in browser | Allowed origins mismatch in `application-prod.yml` | Verify `app.security.allowed-origins` includes `https://diagram-architect.jking.ai` |
 | Function deploy fails | Missing secret in Secret Manager | Create secret: `echo -n "<key>" \| gcloud secrets create DIAGRAM_ARCHITECT_API_KEY --data-file=-` |
 
 ### Secret Rotation

@@ -2,6 +2,7 @@ app:
   security:
     api-key: ${API_KEY}
     allowed-origins:
+      - https://diagram-architect.jking.ai
       - https://diagram-architect.web.app
       - https://diagram-architect.firebaseapp.com
 
